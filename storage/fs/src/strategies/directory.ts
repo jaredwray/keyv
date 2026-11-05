@@ -77,7 +77,9 @@ export class DirectoryStrategy extends Strategy {
 	private readonly _shards = new Set<string>();
 	private readonly _cleanUps = new Set<Promise<void>>();
 	private _closing = false;
-	/** The lock file and the record written to it, when this backend holds one (see lock()). */
+	/** Whether the file system has no hard links, so cleanup needs the lock (see takeLock()). */
+	private _noHardLinks = false;
+	/** The lock file and the record written to it, when this backend took it (see takeLock()). */
 	private _lock: { file: string; record: string } | undefined;
 	private _background: Promise<void> = Promise.resolve();
 
@@ -107,8 +109,9 @@ export class DirectoryStrategy extends Strategy {
 			await fsOps.mkdir(this.trashDirectory, PRIVATE);
 		}
 
-		if (!(await this.hasHardLinks())) {
-			await this.lock();
+		this._noHardLinks = !(await this.hasHardLinks());
+		if (this._noHardLinks) {
+			await this.takeLock();
 		}
 
 		// Before the first operation, so it sees any entry this puts back.
@@ -257,6 +260,11 @@ export class DirectoryStrategy extends Strategy {
 	 * rejects with the first error.
 	 */
 	protected async sweep(reports: Reports): Promise<void> {
+		if (this._noHardLinks && !(await this.holdsLock())) {
+			// The process that held the lock can be stopped now: take over its cleanup.
+			await this.takeLock();
+		}
+
 		await this.purge();
 		const errors: unknown[] = [];
 		const list = (directory: string) =>
@@ -461,6 +469,12 @@ export class DirectoryStrategy extends Strategy {
 	 */
 	private async removeIfExpired(file: string, reports: Reports): Promise<void> {
 		await this._mutex.run(file, async () => {
+			// Without hard links, only the lock holder can put a newer write back (see restore()),
+			// so only it moves entries aside. Reads in other processes still hide expired entries.
+			if (this._noHardLinks && !(await this.holdsLock())) {
+				return;
+			}
+
 			const line = await readFirstLine(file);
 			const header = parseEntryHeader(line ?? "");
 			if (line !== undefined && header === undefined) {
@@ -551,9 +565,10 @@ export class DirectoryStrategy extends Strategy {
 	}
 
 	/**
-	 * Whether this backend still holds the lock: the lock file holds the record that it wrote. A
-	 * full record of a running process is never stale, so no other process can take the lock
-	 * away. Only a person who deletes the file can.
+	 * Whether this backend holds the lock: the lock file holds the record that it wrote. A full
+	 * record of a running process is never stale, so no other process can take the lock away while
+	 * it works. Only a claim that moves the lock in the moment after it was written, or a person
+	 * who deletes the file, can.
 	 */
 	private async holdsLock(): Promise<boolean> {
 		if (this._lock === undefined) {
@@ -744,29 +759,24 @@ export class DirectoryStrategy extends Strategy {
 	}
 
 	/**
-	 * Takes the lock file of the store, `keyv-fs.lock`, for this process. Without hard links,
-	 * expiry cleanup is safe only when one process uses the store, so a second process gets an
-	 * error. This process takes over a lock that a stopped process on this computer left.
-	 * @throws {Error} If another process holds the lock.
+	 * Tries to take the lock file of the store, `keyv-fs.lock`, for this process. Without hard
+	 * links, only the process that holds the lock removes expired entries and puts entries back
+	 * (see removeIfExpired() and restore()). Other processes use the store too, but leave that
+	 * work to the holder. This process takes over a lock that a stopped process on this computer
+	 * left, at load and at each sweep.
+	 * @returns Whether this process holds the lock now.
 	 */
-	private async lock(): Promise<void> {
+	private async takeLock(): Promise<boolean> {
 		const lock = path.join(this.path, "keyv-fs.lock");
 		// The token makes the record unique, so this process can tell its own record from another.
 		const record = JSON.stringify({ pid: process.pid, host: hostname(), token: randomHex(8) });
-		let holder: LockOwner | undefined;
 		for (let attempt = 1; attempt <= LOCK_ATTEMPTS; attempt++) {
 			try {
 				await fsOps.writeFile(lock, record, { flag: "wx", mode: PRIVATE_FILE_MODE });
+				this._lock = { file: lock, record };
 				// If this process stopped for a long time before it wrote the record, another process
-				// can take over the lock. Then the lock file holds the record of that process.
-				const written = await fsOps.readFile(lock, "utf8").catch(() => undefined);
-				if (written === record) {
-					this._lock = { file: lock, record };
-					return;
-				}
-
-				holder = parseLockOwner(written ?? "");
-				break;
+				// can take over the lock. Then holdsLock() finds the record of that process.
+				return await this.holdsLock();
 			} catch (error) {
 				if (!hasCode(error, "EEXIST")) {
 					throw error;
@@ -775,29 +785,24 @@ export class DirectoryStrategy extends Strategy {
 
 			const found = await inspectLock(lock);
 			if (found.state === "held") {
-				holder = found.owner;
-				break;
+				return false;
 			}
 
 			if (found.state === "stale" && !(await this.claimStaleLock(lock, found.record))) {
-				break;
+				return false;
 			}
 		}
 
-		const who =
-			holder === undefined ? "another process" : `process ${holder.pid} on ${holder.host}`;
-		throw new Error(
-			`@keyv/fs: ${this.path} is on a file system without hard links, so only one process at a time can use it, and ${who} has it open. If no process uses it, delete ${lock}.`,
-		);
+		return false;
 	}
 
 	/**
 	 * Removes a lock that a stopped process left. The lock is first moved into `tmp/`, so only one
 	 * process can claim it. Then its record is compared with the record that was read. If another
-	 * process took the lock in between, this process stops with an error. It does not put that
-	 * lock back: no rename can refuse to replace a lock that a third process makes meanwhile. The
-	 * process whose lock was moved keeps its data safe: it no longer holds the lock, so it does not
-	 * move entries back (see restore()).
+	 * process took the lock in between, this process does not take the lock. It does not put that
+	 * lock back either: no rename can refuse to replace a lock that a third process makes
+	 * meanwhile. The process whose lock was moved no longer holds the lock, so it stops its
+	 * cleanup, and a process takes the free lock at its next sweep.
 	 * @param lock - The lock file.
 	 * @param record - The stale record that was read from it.
 	 * @returns Whether the stale lock is gone, so this process can try to take the lock.
@@ -909,10 +914,7 @@ async function readHeaderLine(file: string): Promise<EntryHeader | undefined> {
 type LockOwner = { pid: number; host: string };
 
 /** What a lock file shows: a holder, a lock that a stopped process left, or no lock. */
-type LockState =
-	| { state: "held"; owner?: LockOwner }
-	| { state: "stale"; record: string }
-	| { state: "gone" };
+type LockState = { state: "held" } | { state: "stale"; record: string } | { state: "gone" };
 
 /**
  * Examines a lock file that already exists.
@@ -941,7 +943,7 @@ async function inspectLock(lock: string): Promise<LockState> {
 		return Date.now() - modified > STALE_LOCK_MS ? { state: "stale", record } : { state: "held" };
 	}
 
-	return isRunning(owner) ? { state: "held", owner } : { state: "stale", record };
+	return isRunning(owner) ? { state: "held" } : { state: "stale", record };
 }
 
 /**

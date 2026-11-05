@@ -632,20 +632,28 @@ describe("directory strategy without hard links", () => {
 		return { DirectoryStrategy, root, lock: path.join(root, "keyv-fs.lock") };
 	}
 
-	test("one process at a time can use the store, and closing releases it", async () => {
+	test("one process holds the lock and cleans up; another works without it, and takes it over later", async () => {
 		const { DirectoryStrategy, root, lock } = await withoutHardLinks();
 		const a = new DirectoryStrategy(root, 60_000);
 		const b = new DirectoryStrategy(root, 60_000);
 		await a.load();
-		expect(JSON.parse(readFileSync(lock, "utf8"))).toMatchObject({
-			pid: process.pid,
-			host: hostname(),
-		});
-		await expect(b.load()).rejects.toThrow(/only one process at a time/);
+		await b.load();
+		const held = readFileSync(lock, "utf8");
+		expect(JSON.parse(held)).toMatchObject({ pid: process.pid, host: hostname() });
+		await a.set(undefined, { key: "k", value: "v", expires: Date.now() + 60_000 });
+		skipAhead();
+		// Both hide the expired entry, but only the holder removes it.
+		expect(await b.get(undefined, "k", [])).toBeUndefined();
+		expect(existsSync(entryFile(root, "k"))).toBe(true);
+		expect(await a.get(undefined, "k", [])).toBeUndefined();
+		expect(existsSync(entryFile(root, "k"))).toBe(false);
 		await a.close();
 		expect(existsSync(lock)).toBe(false);
-		await b.load();
+		// The next sweep of the other process takes the free lock.
+		await b.clearExpired();
+		expect(readFileSync(lock, "utf8")).not.toBe(held);
 		await b.close();
+		expect(existsSync(lock)).toBe(false);
 	});
 
 	test("a lock that a stopped process left, or an old damaged lock, is taken over", async () => {
@@ -671,6 +679,27 @@ describe("directory strategy without hard links", () => {
 		}
 	});
 
+	test("a lock that its process is still writing, or that a running process holds, is kept", async () => {
+		const { DirectoryStrategy, root, lock } = await withoutHardLinks();
+		mkdirSync(root);
+		// Created with "wx", but the record is not written yet.
+		const locks = [
+			"",
+			JSON.stringify({ pid: process.pid, host: `not-${hostname()}` }),
+			JSON.stringify({ pid: 4242, host: hostname() }),
+		];
+		vi.spyOn(process, "kill").mockImplementation(() => {
+			throw errno("EPERM");
+		});
+		for (const content of locks) {
+			writeFileSync(lock, content);
+			const store = new DirectoryStrategy(root, 60_000);
+			await store.load();
+			await store.close();
+			expect(readFileSync(lock, "utf8")).toBe(content);
+		}
+	});
+
 	test("a lock that another process takes over before this one wrote its record is not used", async () => {
 		const { DirectoryStrategy, root, lock } = await withoutHardLinks();
 		// This process stops after it creates the lock. Meanwhile another process takes it over.
@@ -682,18 +711,10 @@ describe("directory strategy without hard links", () => {
 				writeFileSync(lock, other);
 			}
 		}) as never);
-		await expect(new DirectoryStrategy(root, 60_000).load()).rejects.toThrow(/process 4242/);
+		const store = new DirectoryStrategy(root, 60_000);
+		await store.load();
+		await store.close();
 		expect(readFileSync(lock, "utf8")).toBe(other);
-
-		// The other process moved the lock aside to claim it, and has not made its own lock yet.
-		rmSync(lock);
-		vi.mocked(fsOps.writeFile).mockImplementation((async (target: string, ...rest: unknown[]) => {
-			await writeFile(target, ...rest);
-			if (target === lock) {
-				rmSync(lock);
-			}
-		}) as never);
-		await expect(new DirectoryStrategy(root, 60_000).load()).rejects.toThrow(/another process/);
 	});
 
 	test("disconnect leaves a lock that another process holds now", async () => {
@@ -704,28 +725,6 @@ describe("directory strategy without hard links", () => {
 		writeFileSync(lock, other);
 		await store.close();
 		expect(readFileSync(lock, "utf8")).toBe(other);
-	});
-
-	test("a lock that its process is still writing is kept", async () => {
-		const { DirectoryStrategy, root, lock } = await withoutHardLinks();
-		mkdirSync(root);
-		// Created with "wx", but the record is not written yet.
-		writeFileSync(lock, "");
-		await expect(new DirectoryStrategy(root, 60_000).load()).rejects.toThrow(/another process/);
-		expect(readFileSync(lock, "utf8")).toBe("");
-	});
-
-	test("a lock held on another computer, or by a process of another user, is kept", async () => {
-		const { DirectoryStrategy, root, lock } = await withoutHardLinks();
-		mkdirSync(root);
-		writeFileSync(lock, JSON.stringify({ pid: process.pid, host: `not-${hostname()}` }));
-		await expect(new DirectoryStrategy(root, 60_000).load()).rejects.toThrow(/on not-/);
-		writeFileSync(lock, JSON.stringify({ pid: 4242, host: hostname() }));
-		vi.spyOn(process, "kill").mockImplementation(() => {
-			throw errno("EPERM");
-		});
-		await expect(new DirectoryStrategy(root, 60_000).load()).rejects.toThrow(/process 4242/);
-		expect(readFileSync(lock, "utf8")).toContain("4242");
 	});
 
 	test("a stale lock that another process takes over first is not put back, and not taken", async () => {
@@ -745,11 +744,13 @@ describe("directory strategy without hard links", () => {
 
 			return rename(from, to);
 		}) as never);
-		await expect(new DirectoryStrategy(root, 60_000).load()).rejects.toThrow(/another process/);
+		const store = new DirectoryStrategy(root, 60_000);
+		await store.load();
 		// No rename puts it back, so none can replace a newer lock.
 		expect(existsSync(lock)).toBe(false);
 		const moved = readdirSync(path.join(root, "tmp")).filter((name) => name.endsWith(".lock"));
 		expect(moved.map((name) => readFileSync(path.join(root, "tmp", name), "utf8"))).toEqual([live]);
+		await store.close();
 	});
 
 	test("a claimed lock is not put back over a lock that a third process made meanwhile", async () => {
@@ -773,7 +774,9 @@ describe("directory strategy without hard links", () => {
 
 			return rename(from, to);
 		}) as never);
-		await expect(new DirectoryStrategy(root, 60_000).load()).rejects.toThrow(/another process/);
+		const store = new DirectoryStrategy(root, 60_000);
+		await store.load();
+		await store.close();
 		expect(readFileSync(lock, "utf8")).toBe(third);
 	});
 
@@ -799,17 +802,23 @@ describe("directory strategy without hard links", () => {
 		await store.close();
 	});
 
-	test("the store gives up after a few tries when the lock keeps changing", async () => {
+	test("the store stops after a few tries when the lock keeps changing", async () => {
 		const { DirectoryStrategy, root, lock } = await withoutHardLinks();
 		const writeFile = fsOps.writeFile as (...args: unknown[]) => Promise<void>;
-		vi.spyOn(fsOps, "writeFile").mockImplementation((async (target: string, ...rest: unknown[]) => {
+		const spy = vi.spyOn(fsOps, "writeFile").mockImplementation((async (
+			target: string,
+			...rest: unknown[]
+		) => {
 			if (target === lock) {
 				throw errno("EEXIST");
 			}
 
 			return writeFile(target, ...rest);
 		}) as never);
-		await expect(new DirectoryStrategy(root, 60_000).load()).rejects.toThrow(/another process/);
+		const store = new DirectoryStrategy(root, 60_000);
+		await store.load();
+		expect(spy.mock.calls.filter(([target]) => target === lock)).toHaveLength(3);
+		await store.close();
 	});
 
 	describe("an entry left in tmp/ by a crash", () => {
@@ -847,16 +856,12 @@ describe("directory strategy without hard links", () => {
 			await store.close();
 		});
 
-		test("waits in tmp/ when this process no longer holds the lock, or the check fails", async () => {
+		test("waits in tmp/ while another process holds the lock, or the check fails", async () => {
 			const { lock, store, parked, file } = await heldStore();
 			mkdirSync(path.dirname(file), { recursive: true });
 			writeFileSync(parked, `${header("k")}value`);
 			const own = readFileSync(lock, "utf8");
 			writeFileSync(lock, JSON.stringify({ pid: 4242, host: `not-${hostname()}` }));
-			await store.clearExpired();
-			expect(existsSync(parked)).toBe(true);
-			// A person deleted the lock file.
-			rmSync(lock);
 			await store.clearExpired();
 			expect(existsSync(parked)).toBe(true);
 			writeFileSync(lock, own);
@@ -871,6 +876,8 @@ describe("directory strategy without hard links", () => {
 			await store.clearExpired();
 			expect(existsSync(parked)).toBe(true);
 			vi.mocked(fsOps.stat).mockImplementation(stat as never);
+			// A person deleted the lock file: the next sweep takes the lock again, and puts it back.
+			rmSync(lock);
 			await store.clearExpired();
 			expect(await store.get(undefined, "k", [])).toBe("value");
 			await store.close();
