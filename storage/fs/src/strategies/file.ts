@@ -83,6 +83,9 @@ export class FileStrategy extends Strategy {
 			throw error;
 		}
 
+		// Again after the read: if a link sent the read elsewhere, the data in memory came from
+		// another user, so the load fails.
+		this.checkPath();
 		if (damage) {
 			this._index = new Map();
 			const quarantinePath = `${this.path}.corrupt-${timestamp()}-${randomHex(2)}`;

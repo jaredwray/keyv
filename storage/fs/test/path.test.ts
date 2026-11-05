@@ -1,4 +1,4 @@
-import { mkdirSync, readdirSync, statSync, symlinkSync } from "node:fs";
+import { mkdirSync, readdirSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import KeyvFs from "../src/index.js";
@@ -80,4 +80,49 @@ test("without a user ID, as on Windows, only symbolic links are checked", async 
 	await store.set("k", "v");
 	expect(await store.get("k")).toBe("v");
 	await store.disconnect();
+});
+
+describe.skipIf(process.platform === "win32")("a link put in place during the load", () => {
+	test("directory strategy: a link put in place before the marker is read is refused", async () => {
+		const { missing, location, elsewhere } = storeBelowMissing("directory");
+		// The other user prepares a store that looks valid, then links it in place.
+		mkdirSync(path.join(elsewhere, "store"));
+		writeFileSync(
+			path.join(elsewhere, "store", "keyv-fs.json"),
+			'{"format":"keyv-fs","kind":"directory","version":1}',
+		);
+		const store = new KeyvFs({ path: location, strategy: "directory" });
+		const readFile = fsOps.readFile as (...args: unknown[]) => Promise<unknown>;
+		vi.spyOn(fsOps, "readFile").mockImplementation((async (target: string, ...rest: unknown[]) => {
+			if (target === path.join(location, "keyv-fs.json")) {
+				symlinkSync(elsewhere, missing);
+				vi.mocked(fsOps.readFile).mockImplementation(readFile as never);
+			}
+
+			return readFile(target, ...rest);
+		}) as never);
+		await expect(store.set("k", "v")).rejects.toThrow(/symbolic link/);
+		expect(readdirSync(path.join(elsewhere, "store"))).toEqual(["keyv-fs.json"]);
+		await store.disconnect();
+	});
+
+	test("file strategy: a link put in place before the file is read is refused", async () => {
+		const { missing, location, elsewhere } = storeBelowMissing("file");
+		writeFileSync(
+			path.join(elsewhere, "store.jsonl"),
+			'{"format":"keyv-fs","kind":"file","version":1}\n{"op":"set","k":"k","s":"theirs"}\n{"op":"checkpoint","count":1}\n',
+		);
+		const store = new KeyvFs(location);
+		const createReadStream = fsOps.createReadStream as (...args: unknown[]) => unknown;
+		vi.spyOn(fsOps, "createReadStream").mockImplementation(((
+			target: string,
+			...rest: unknown[]
+		) => {
+			symlinkSync(elsewhere, missing);
+			vi.mocked(fsOps.createReadStream).mockImplementation(createReadStream as never);
+			return createReadStream(target, ...rest);
+		}) as never);
+		await expect(store.get("k")).rejects.toThrow(/symbolic link/);
+		await store.disconnect();
+	});
 });

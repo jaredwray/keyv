@@ -90,7 +90,12 @@ export class DirectoryStrategy extends Strategy {
 	}
 
 	protected async read(): Promise<void> {
-		if (await this.checkMarker()) {
+		const created = await this.checkMarker();
+		// Again after the first use of the path: a link put in place since the check before the
+		// load would send all later operations elsewhere. From here on, the directories that were
+		// missing are this user's, so no other user can change them.
+		this.checkPath();
+		if (created) {
 			// A new store. In an existing one the directories are already there, and writes and
 			// clears make any that went missing.
 			await fsOps.mkdir(this.dataDirectory, PRIVATE);
