@@ -916,6 +916,28 @@ describe("directory strategy without hard links", () => {
 			return rename(from, to);
 		}) as never);
 		await expect(new DirectoryStrategy(root, 60_000).load()).rejects.toThrow("EACCES");
+
+		// The lock is taken, but its record can't be read back, at load or at a sweep.
+		rmSync(lock);
+		const readFile = fsOps.readFile as (...args: unknown[]) => Promise<unknown>;
+		const failRead = (async (target: string, ...rest: unknown[]) => {
+			if (target === lock) {
+				throw errno("EIO");
+			}
+
+			return readFile(target, ...rest);
+		}) as never;
+		vi.mocked(fsOps.rename).mockImplementation(rename as never);
+		vi.spyOn(fsOps, "readFile").mockImplementation(failRead);
+		await expect(new DirectoryStrategy(root, 60_000).load()).rejects.toThrow("EIO");
+		vi.mocked(fsOps.readFile).mockImplementation(readFile as never);
+		rmSync(lock);
+		const store = new DirectoryStrategy(root, 60_000);
+		await store.load();
+		vi.mocked(fsOps.readFile).mockImplementation(failRead);
+		await expect(store.clearExpired()).rejects.toThrow("EIO");
+		vi.mocked(fsOps.readFile).mockImplementation(readFile as never);
+		await store.close();
 	});
 });
 

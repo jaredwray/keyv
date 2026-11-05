@@ -565,7 +565,8 @@ export class DirectoryStrategy extends Strategy {
 	}
 
 	/**
-	 * Whether this backend holds the lock: the lock file holds the record that it wrote. A full
+	 * Whether this backend holds the lock: the lock file holds the record that it wrote.
+	 * @throws The error from reading the lock file, unless the file is missing. A full
 	 * record of a running process is never stale, so no other process can take the lock away while
 	 * it works. Only a claim that moves the lock in the moment after it was written, or a person
 	 * who deletes the file, can.
@@ -575,7 +576,19 @@ export class DirectoryStrategy extends Strategy {
 			return false;
 		}
 
-		const record = await fsOps.readFile(this._lock.file, "utf8").catch(() => undefined);
+		let record: string;
+		try {
+			record = await fsOps.readFile(this._lock.file, "utf8");
+		} catch (error) {
+			// No lock file: nobody holds the lock. Any other error is reported, so a failed check
+			// does not stop the cleanup without a word.
+			if (hasCode(error, "ENOENT")) {
+				return false;
+			}
+
+			throw error;
+		}
+
 		return record === this._lock.record;
 	}
 
