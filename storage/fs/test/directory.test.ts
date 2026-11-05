@@ -688,20 +688,36 @@ describe("directory strategy without hard links", () => {
 		await b.close();
 	});
 
-	test("a lock that a stopped process left, or a damaged lock, is taken over", async () => {
+	test("a lock that a stopped process left, or an old damaged lock, is taken over", async () => {
 		const { DirectoryStrategy } = await withoutHardLinks();
 		const { pid } = spawnSync(process.execPath, ["-e", ""]);
-		for (const content of [JSON.stringify({ pid, host: hostname() }), "", "null", "{}"]) {
+		const old = new Date(Date.now() - 60 * 60 * 1000);
+		const locks = [
+			{ content: JSON.stringify({ pid, host: hostname() }), modified: new Date() },
+			{ content: "", modified: old },
+			{ content: "null", modified: old },
+			{ content: "{}", modified: old },
+		];
+		for (const { content, modified } of locks) {
 			const root = path.join(tempDir(), "store");
+			const lock = path.join(root, "keyv-fs.lock");
 			mkdirSync(root);
-			writeFileSync(path.join(root, "keyv-fs.lock"), content);
+			writeFileSync(lock, content);
+			utimesSync(lock, modified, modified);
 			const store = new DirectoryStrategy(root, 60_000);
 			await store.load();
-			expect(JSON.parse(readFileSync(path.join(root, "keyv-fs.lock"), "utf8")).pid).toBe(
-				process.pid,
-			);
+			expect(JSON.parse(readFileSync(lock, "utf8")).pid).toBe(process.pid);
 			await store.close();
 		}
+	});
+
+	test("a lock that its process is still writing is kept", async () => {
+		const { DirectoryStrategy, root, lock } = await withoutHardLinks();
+		mkdirSync(root);
+		// Created with "wx", but the record is not written yet.
+		writeFileSync(lock, "");
+		await expect(new DirectoryStrategy(root, 60_000).load()).rejects.toThrow(/another process/);
+		expect(readFileSync(lock, "utf8")).toBe("");
 	});
 
 	test("a lock held on another computer, or by a process of another user, is kept", async () => {
@@ -717,14 +733,54 @@ describe("directory strategy without hard links", () => {
 		expect(readFileSync(lock, "utf8")).toContain("4242");
 	});
 
-	test("a lock that another process takes after a stale one is removed is kept", async () => {
+	test("a stale lock that another process takes over first is put back, not taken", async () => {
 		const { DirectoryStrategy, root, lock } = await withoutHardLinks();
+		const { pid } = spawnSync(process.execPath, ["-e", ""]);
 		mkdirSync(root);
-		writeFileSync(lock, "");
+		writeFileSync(lock, JSON.stringify({ pid, host: hostname() }));
+		// Another process replaces the stale lock with its own before this one moves it aside.
+		const live = JSON.stringify({ pid: process.pid, host: hostname() });
+		const rename = fsOps.rename as (from: string, to: string) => Promise<void>;
+		let replaced = false;
+		vi.spyOn(fsOps, "rename").mockImplementation((async (from: string, to: string) => {
+			if (!replaced && from === lock) {
+				replaced = true;
+				writeFileSync(lock, live);
+			}
+
+			return rename(from, to);
+		}) as never);
+		await expect(new DirectoryStrategy(root, 60_000).load()).rejects.toThrow(/another process/);
+		expect(readFileSync(lock, "utf8")).toBe(live);
+	});
+
+	test("a lock that vanishes while it is examined is taken", async () => {
+		const { DirectoryStrategy, root, lock } = await withoutHardLinks();
+		const { pid } = spawnSync(process.execPath, ["-e", ""]);
+		mkdirSync(root);
+		writeFileSync(lock, JSON.stringify({ pid, host: hostname() }));
+		// Another process claims the stale lock first, and the next lock is gone when it is read.
+		const rename = fsOps.rename as (from: string, to: string) => Promise<void>;
+		let claimed = false;
+		vi.spyOn(fsOps, "rename").mockImplementation((async (from: string, to: string) => {
+			if (!claimed && from === lock) {
+				claimed = true;
+				rmSync(from);
+			}
+
+			return rename(from, to);
+		}) as never);
+		const store = new DirectoryStrategy(root, 60_000);
+		await store.load();
+		expect(JSON.parse(readFileSync(lock, "utf8")).pid).toBe(process.pid);
+		await store.close();
+	});
+
+	test("the store gives up after a few tries when the lock keeps changing", async () => {
+		const { DirectoryStrategy, root, lock } = await withoutHardLinks();
 		const writeFile = fsOps.writeFile as (...args: unknown[]) => Promise<void>;
-		let attempts = 0;
 		vi.spyOn(fsOps, "writeFile").mockImplementation((async (target: string, ...rest: unknown[]) => {
-			if (target === lock && ++attempts === 2) {
+			if (target === lock) {
 				throw errno("EEXIST");
 			}
 
@@ -733,15 +789,36 @@ describe("directory strategy without hard links", () => {
 		await expect(new DirectoryStrategy(root, 60_000).load()).rejects.toThrow(/another process/);
 	});
 
-	test("an error writing the lock fails the load", async () => {
+	test("an error writing or reading the lock fails the load", async () => {
 		const { DirectoryStrategy, root, lock } = await withoutHardLinks();
 		const writeFile = fsOps.writeFile as (...args: unknown[]) => Promise<void>;
-		vi.spyOn(fsOps, "writeFile").mockImplementation((async (target: string, ...rest: unknown[]) => {
+		const spy = vi.spyOn(fsOps, "writeFile").mockImplementation((async (
+			target: string,
+			...rest: unknown[]
+		) => {
 			if (target === lock) {
 				throw errno("EACCES");
 			}
 
 			return writeFile(target, ...rest);
+		}) as never);
+		await expect(new DirectoryStrategy(root, 60_000).load()).rejects.toThrow("EACCES");
+		spy.mockRestore();
+
+		writeFileSync(lock, "");
+		vi.spyOn(fsOps, "stat").mockRejectedValueOnce(errno("EIO"));
+		await expect(new DirectoryStrategy(root, 60_000).load()).rejects.toThrow("EIO");
+
+		// A stale lock that can't be moved aside.
+		const { pid } = spawnSync(process.execPath, ["-e", ""]);
+		writeFileSync(lock, JSON.stringify({ pid, host: hostname() }));
+		const rename = fsOps.rename as (from: string, to: string) => Promise<void>;
+		vi.spyOn(fsOps, "rename").mockImplementation((async (from: string, to: string) => {
+			if (from === lock) {
+				throw errno("EACCES");
+			}
+
+			return rename(from, to);
 		}) as never);
 		await expect(new DirectoryStrategy(root, 60_000).load()).rejects.toThrow("EACCES");
 	});

@@ -41,6 +41,10 @@ const STALE_TEMPORARY_MS = 15 * 60 * 1000;
 const NAMESPACE_DIRECTORY = /^(?:_|n-[0-9a-f]{64})$/;
 const SHARD_DIRECTORY = /^[0-9a-f]{2}$/;
 const ENTRY_FILE = /^[0-9a-f]{64}\.kv$/;
+/** A lock file that can't be read after this long is from a stopped process: see inspectLock(). */
+const STALE_LOCK_MS = 60 * 1000;
+/** Tries to take a lock before the store gives up. */
+const LOCK_ATTEMPTS = 3;
 /** An entry being deleted: `<pid>-<time moved, ms>-<random>.deleting`. */
 const DELETING_FILE = /^\d+-(\d+)-[0-9a-f]+\.deleting$/;
 /** Create a directory for the owner only. */
@@ -721,7 +725,8 @@ export class DirectoryStrategy extends Strategy {
 	private async lock(): Promise<void> {
 		const lock = path.join(this.path, "keyv-fs.lock");
 		const owner: LockOwner = { pid: process.pid, host: hostname() };
-		for (let attempt = 1; ; attempt++) {
+		let holder: LockOwner | undefined;
+		for (let attempt = 1; attempt <= LOCK_ATTEMPTS; attempt++) {
 			try {
 				await fsOps.writeFile(lock, JSON.stringify(owner), {
 					flag: "wx",
@@ -735,18 +740,52 @@ export class DirectoryStrategy extends Strategy {
 				}
 			}
 
-			const holder = await readLockOwner(lock);
-			if (attempt > 1 || (holder !== undefined && isRunning(holder))) {
-				const who =
-					holder === undefined ? "another process" : `process ${holder.pid} on ${holder.host}`;
-				throw new Error(
-					`@keyv/fs: ${this.path} is on a file system without hard links, so only one process at a time can use it, and ${who} has it open. If no process uses it, delete ${lock}.`,
-				);
+			const found = await inspectLock(lock);
+			if (found.state === "held") {
+				holder = found.owner;
+				break;
 			}
 
-			// The process that held the lock stopped without releasing it.
-			await unlinkIfExists(lock);
+			if (found.state === "stale" && !(await this.claimStaleLock(lock, found.record))) {
+				break;
+			}
 		}
+
+		const who =
+			holder === undefined ? "another process" : `process ${holder.pid} on ${holder.host}`;
+		throw new Error(
+			`@keyv/fs: ${this.path} is on a file system without hard links, so only one process at a time can use it, and ${who} has it open. If no process uses it, delete ${lock}.`,
+		);
+	}
+
+	/**
+	 * Removes a lock that a stopped process left. The lock is first moved into `tmp/`, so only one
+	 * process can claim it. Then its record is compared with the record that was read. If another
+	 * process took the lock in between, the lock is put back.
+	 * @param lock - The lock file.
+	 * @param record - The stale record that was read from it.
+	 * @returns Whether the stale lock is gone, so this process can try to take the lock.
+	 */
+	private async claimStaleLock(lock: string, record: string): Promise<boolean> {
+		const claimed = path.join(this.temporaryDirectory, `${process.pid}-${randomHex(8)}.lock`);
+		try {
+			await renameWithRetry(lock, claimed);
+		} catch (error) {
+			if (hasCode(error, "ENOENT")) {
+				// Another process claimed it first.
+				return true;
+			}
+
+			throw error;
+		}
+
+		if ((await fsOps.readFile(claimed, "utf8")) === record) {
+			await unlinkIfExists(claimed);
+			return true;
+		}
+
+		await renameWithRetry(claimed, lock);
+		return false;
 	}
 
 	/**
@@ -833,15 +872,50 @@ async function readHeaderLine(file: string): Promise<EntryHeader | undefined> {
 /** The process that holds the lock file of a store. */
 type LockOwner = { pid: number; host: string };
 
+/** What a lock file shows: a holder, a lock that a stopped process left, or no lock. */
+type LockState =
+	| { state: "held"; owner?: LockOwner }
+	| { state: "stale"; record: string }
+	| { state: "gone" };
+
 /**
- * Reads the owner from a lock file.
+ * Examines a lock file that already exists.
+ *
+ * A record that can't be read is from a process that is still writing it, or from a process
+ * that stopped while it wrote it. Only age tells them apart, so it is stale only after
+ * {@link STALE_LOCK_MS}. A record that can be read is stale when its process is not running.
  * @param lock - The lock file.
- * @returns The owner, or `undefined` when the file is missing or damaged (for example, a process
- * stopped while it wrote the file).
  */
-async function readLockOwner(lock: string): Promise<LockOwner | undefined> {
+async function inspectLock(lock: string): Promise<LockState> {
+	let record: string;
+	let modified: number;
 	try {
-		const owner = JSON.parse(await fsOps.readFile(lock, "utf8")) as Partial<LockOwner> | null;
+		record = await fsOps.readFile(lock, "utf8");
+		modified = (await fsOps.stat(lock)).mtimeMs;
+	} catch (error) {
+		if (hasCode(error, "ENOENT")) {
+			return { state: "gone" };
+		}
+
+		throw error;
+	}
+
+	const owner = parseLockOwner(record);
+	if (owner === undefined) {
+		return Date.now() - modified > STALE_LOCK_MS ? { state: "stale", record } : { state: "held" };
+	}
+
+	return isRunning(owner) ? { state: "held", owner } : { state: "stale", record };
+}
+
+/**
+ * Reads the owner from the record of a lock file.
+ * @param record - The text of the lock file.
+ * @returns The owner, or `undefined` when the record is incomplete or damaged.
+ */
+function parseLockOwner(record: string): LockOwner | undefined {
+	try {
+		const owner = JSON.parse(record) as Partial<LockOwner> | null;
 		if (typeof owner?.pid === "number" && typeof owner.host === "string") {
 			return { pid: owner.pid, host: owner.host };
 		}
