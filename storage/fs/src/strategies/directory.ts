@@ -77,8 +77,8 @@ export class DirectoryStrategy extends Strategy {
 	private readonly _shards = new Set<string>();
 	private readonly _cleanUps = new Set<Promise<void>>();
 	private _closing = false;
-	/** The lock file, when this backend holds one (see lock()). */
-	private _lock: string | undefined;
+	/** The lock file and the record written to it, when this backend holds one (see lock()). */
+	private _lock: { file: string; record: string } | undefined;
 	private _background: Promise<void> = Promise.resolve();
 
 	private get dataDirectory(): string {
@@ -317,10 +317,12 @@ export class DirectoryStrategy extends Strategy {
 		this._closing = true;
 		await Promise.all(this._cleanUps);
 		await this._background;
-		if (this._lock !== undefined) {
-			await unlinkIfExists(this._lock);
-			this._lock = undefined;
+		// Only a lock that still holds this backend's record. Another process can hold it now.
+		if (this._lock !== undefined && (await this.holdsLock())) {
+			await unlinkIfExists(this._lock.file);
 		}
+
+		this._lock = undefined;
 	}
 
 	/**
@@ -514,27 +516,52 @@ export class DirectoryStrategy extends Strategy {
 
 	/**
 	 * Puts a moved-aside entry back at its path, unless a newer write took the path meanwhile
-	 * (EEXIST) or the namespace was cleared (ENOENT). On a file system without hard links (FAT,
-	 * some network shares) it is moved back instead, if no newer write took the path. There, the
-	 * store holds a lock (see lock()), so no other process can write in between.
+	 * (EEXIST) or the namespace was cleared (ENOENT).
+	 *
+	 * On a file system without hard links (FAT, some network shares), the entry is moved back
+	 * instead, if no newer write took the path. A move replaces a write that comes between the
+	 * check and the move, so only the process that holds the lock (see lock()) moves an entry
+	 * back, and it checks the lock first. Any other process leaves the entry in `tmp/`, and the
+	 * holder puts it back at its next load or sweep.
+	 * @throws The error from `link`, when the entry can't be put back now.
 	 */
 	private async restore(parked: string, file: string): Promise<void> {
 		try {
 			await fsOps.link(parked, file);
 		} catch (error) {
-			if (!hasCode(error, "EEXIST", "ENOENT", "ENOTDIR") && !(await exists(file))) {
-				try {
-					await renameWithRetry(parked, file);
-					return;
-				} catch (renameError) {
-					if (!hasCode(renameError, "ENOENT", "ENOTDIR")) {
-						throw renameError;
+			if (!hasCode(error, "EEXIST", "ENOENT", "ENOTDIR")) {
+				if (!(await this.holdsLock())) {
+					throw error;
+				}
+
+				if (!(await exists(file))) {
+					try {
+						await renameWithRetry(parked, file);
+						return;
+					} catch (renameError) {
+						if (!hasCode(renameError, "ENOENT", "ENOTDIR")) {
+							throw renameError;
+						}
 					}
 				}
 			}
 		}
 
 		await unlinkIfExists(parked);
+	}
+
+	/**
+	 * Whether this backend still holds the lock: the lock file holds the record that it wrote. A
+	 * full record of a running process is never stale, so no other process can take the lock
+	 * away. Only a person who deletes the file can.
+	 */
+	private async holdsLock(): Promise<boolean> {
+		if (this._lock === undefined) {
+			return false;
+		}
+
+		const record = await fsOps.readFile(this._lock.file, "utf8").catch(() => undefined);
+		return record === this._lock.record;
 	}
 
 	private async readEntry(
@@ -724,16 +751,22 @@ export class DirectoryStrategy extends Strategy {
 	 */
 	private async lock(): Promise<void> {
 		const lock = path.join(this.path, "keyv-fs.lock");
-		const owner: LockOwner = { pid: process.pid, host: hostname() };
+		// The token makes the record unique, so this process can tell its own record from another.
+		const record = JSON.stringify({ pid: process.pid, host: hostname(), token: randomHex(8) });
 		let holder: LockOwner | undefined;
 		for (let attempt = 1; attempt <= LOCK_ATTEMPTS; attempt++) {
 			try {
-				await fsOps.writeFile(lock, JSON.stringify(owner), {
-					flag: "wx",
-					mode: PRIVATE_FILE_MODE,
-				});
-				this._lock = lock;
-				return;
+				await fsOps.writeFile(lock, record, { flag: "wx", mode: PRIVATE_FILE_MODE });
+				// If this process stopped for a long time before it wrote the record, another process
+				// can take over the lock. Then the lock file holds the record of that process.
+				const written = await fsOps.readFile(lock, "utf8").catch(() => undefined);
+				if (written === record) {
+					this._lock = { file: lock, record };
+					return;
+				}
+
+				holder = parseLockOwner(written ?? "");
+				break;
 			} catch (error) {
 				if (!hasCode(error, "EEXIST")) {
 					throw error;
@@ -761,7 +794,9 @@ export class DirectoryStrategy extends Strategy {
 	/**
 	 * Removes a lock that a stopped process left. The lock is first moved into `tmp/`, so only one
 	 * process can claim it. Then its record is compared with the record that was read. If another
-	 * process took the lock in between, the lock is put back.
+	 * process took the lock in between, the lock is put back, unless a third process made a new
+	 * lock meanwhile. A lock is never put back over a newer one. A process whose lock is not put
+	 * back no longer holds the lock, and does not move entries back (see restore()).
 	 * @param lock - The lock file.
 	 * @param record - The stale record that was read from it.
 	 * @returns Whether the stale lock is gone, so this process can try to take the lock.
@@ -784,7 +819,10 @@ export class DirectoryStrategy extends Strategy {
 			return true;
 		}
 
-		await renameWithRetry(claimed, lock);
+		if (!(await exists(lock))) {
+			await renameWithRetry(claimed, lock);
+		}
+
 		return false;
 	}
 
