@@ -794,9 +794,10 @@ export class DirectoryStrategy extends Strategy {
 	/**
 	 * Removes a lock that a stopped process left. The lock is first moved into `tmp/`, so only one
 	 * process can claim it. Then its record is compared with the record that was read. If another
-	 * process took the lock in between, the lock is put back, unless a third process made a new
-	 * lock meanwhile. A lock is never put back over a newer one. A process whose lock is not put
-	 * back no longer holds the lock, and does not move entries back (see restore()).
+	 * process took the lock in between, this process stops with an error. It does not put that
+	 * lock back: no rename can refuse to replace a lock that a third process makes meanwhile. The
+	 * process whose lock was moved keeps its data safe: it no longer holds the lock, so it does not
+	 * move entries back (see restore()).
 	 * @param lock - The lock file.
 	 * @param record - The stale record that was read from it.
 	 * @returns Whether the stale lock is gone, so this process can try to take the lock.
@@ -819,10 +820,7 @@ export class DirectoryStrategy extends Strategy {
 			return true;
 		}
 
-		if (!(await exists(lock))) {
-			await renameWithRetry(claimed, lock);
-		}
-
+		// The moved lock stays in tmp/; a later load or sweep removes it.
 		return false;
 	}
 

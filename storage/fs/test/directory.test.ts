@@ -728,13 +728,13 @@ describe("directory strategy without hard links", () => {
 		expect(readFileSync(lock, "utf8")).toContain("4242");
 	});
 
-	test("a stale lock that another process takes over first is put back, not taken", async () => {
+	test("a stale lock that another process takes over first is not put back, and not taken", async () => {
 		const { DirectoryStrategy, root, lock } = await withoutHardLinks();
 		const { pid } = spawnSync(process.execPath, ["-e", ""]);
 		mkdirSync(root);
 		writeFileSync(lock, JSON.stringify({ pid, host: hostname() }));
 		// Another process replaces the stale lock with its own before this one moves it aside.
-		const live = JSON.stringify({ pid: process.pid, host: hostname() });
+		const live = JSON.stringify({ pid: process.pid, host: hostname(), token: "live" });
 		const rename = fsOps.rename as (from: string, to: string) => Promise<void>;
 		let replaced = false;
 		vi.spyOn(fsOps, "rename").mockImplementation((async (from: string, to: string) => {
@@ -746,7 +746,10 @@ describe("directory strategy without hard links", () => {
 			return rename(from, to);
 		}) as never);
 		await expect(new DirectoryStrategy(root, 60_000).load()).rejects.toThrow(/another process/);
-		expect(readFileSync(lock, "utf8")).toBe(live);
+		// No rename puts it back, so none can replace a newer lock.
+		expect(existsSync(lock)).toBe(false);
+		const moved = readdirSync(path.join(root, "tmp")).filter((name) => name.endsWith(".lock"));
+		expect(moved.map((name) => readFileSync(path.join(root, "tmp", name), "utf8"))).toEqual([live]);
 	});
 
 	test("a claimed lock is not put back over a lock that a third process made meanwhile", async () => {
