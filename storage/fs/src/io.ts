@@ -21,13 +21,21 @@ export const fsOps = {
 	createReadStream,
 };
 
-/** The platform, overridable by tests. Not part of the public API. */
-export const runtime = { platform: process.platform as string };
+/**
+ * Facts about the process: the platform, and the user ID (`undefined` on Windows). Tests can
+ * replace them. Not part of the public API.
+ */
+export const runtime = {
+	platform: process.platform as string,
+	uid: (): number | undefined => process.getuid?.(),
+};
 
 /** Bytes written per call when a file is written in pieces. */
 const WRITE_CHUNK_SIZE = 1024 * 1024;
 /** Permissions of the files this package creates: read and write for their owner only. */
 export const PRIVATE_FILE_MODE = 0o600;
+/** Permissions of the directories this package creates: for their owner only. */
+export const PRIVATE_DIRECTORY_MODE = 0o700;
 const UTF8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
 /**
@@ -95,11 +103,14 @@ export async function renameWithRetry(from: string, to: string): Promise<void> {
  * @param lines - The lines to write. Each is followed by a newline.
  * @param mode - The permissions to give the file, such as those of the file it replaces. Without
  * it, the file is readable and writable by its owner only.
+ * @param checkDirectory - Called after the directory is created, before the file is written.
+ * It throws to stop the write.
  */
 export async function atomicWriteFile(
 	target: string,
 	lines: readonly string[],
 	mode?: number,
+	checkDirectory?: () => void,
 ): Promise<void> {
 	const temporary = `${target}.${process.pid}.${randomHex(4)}.tmp`;
 	let handle: fsp.FileHandle;
@@ -110,7 +121,8 @@ export async function atomicWriteFile(
 			throw error;
 		}
 
-		await fsOps.mkdir(path.dirname(target), { recursive: true });
+		await fsOps.mkdir(path.dirname(target), { recursive: true, mode: PRIVATE_DIRECTORY_MODE });
+		checkDirectory?.();
 		handle = await fsOps.open(temporary, "wx", PRIVATE_FILE_MODE);
 	}
 

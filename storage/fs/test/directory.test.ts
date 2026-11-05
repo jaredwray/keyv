@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import {
 	copyFileSync,
 	existsSync,
@@ -9,6 +10,7 @@ import {
 	utimesSync,
 	writeFileSync,
 } from "node:fs";
+import { hostname } from "node:os";
 import path from "node:path";
 import Keyv from "keyv";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -360,6 +362,8 @@ describe("directory strategy best-effort cleanup", () => {
 		await first.disconnect();
 		writeFileSync(path.join(root, "tmp", "1-a.tmp"), "x");
 		writeFileSync(path.join(root, "tmp", "1-b.tmp"), "x");
+		const deleting = path.join(root, "tmp", `1-${Date.now() - 60 * 60 * 1000}-ab.deleting`);
+		writeFileSync(deleting, "x");
 		const old = new Date(Date.now() - 60 * 60 * 1000);
 		utimesSync(path.join(root, "tmp", "1-b.tmp"), old, old);
 		mkdirSync(path.join(root, "trash", "n-left"));
@@ -378,7 +382,26 @@ describe("directory strategy best-effort cleanup", () => {
 		expect(await second.get("k")).toBe("v");
 		await second.disconnect();
 		vi.restoreAllMocks();
-		expect(readdirSync(path.join(root, "tmp")).sort()).toEqual(["1-a.tmp", "1-b.tmp"]);
+		expect(existsSync(path.join(root, "tmp", "1-a.tmp"))).toBe(true);
+		expect(existsSync(path.join(root, "tmp", "1-b.tmp"))).toBe(true);
+		expect(existsSync(deleting)).toBe(true);
+	});
+
+	test("load finishes a delete that a stopped process left, but not one that still runs", async () => {
+		const root = path.join(tempDir(), "store");
+		const first = new KeyvFs({ path: root, strategy: "directory" });
+		await first.get("load");
+		await first.disconnect();
+		const stale = path.join(root, "tmp", `1-${Date.now() - 60 * 60 * 1000}-ab.deleting`);
+		const running = path.join(root, "tmp", `1-${Date.now()}-ab.deleting`);
+		writeFileSync(stale, "x");
+		writeFileSync(running, "x");
+
+		const second = new KeyvFs({ path: root, strategy: "directory" });
+		await second.get("load");
+		await second.disconnect();
+		expect(existsSync(stale)).toBe(false);
+		expect(existsSync(running)).toBe(true);
 	});
 
 	test("a failed write whose temporary file can't be removed still rejects with the cause", async () => {
@@ -597,6 +620,131 @@ describe("directory strategy across processes", () => {
 		expect(reports).toEqual([]);
 		await Promise.all([a.close(), b.close()]);
 	});
+
+	test("delete never removes a write that another process makes after delete read the entry", async () => {
+		const { a, b, file } = await twoProcesses();
+		// The expired entry is read, then another process writes the key before the delete ends.
+		const unlink = fsOps.unlink as (target: string) => Promise<void>;
+		let raced = false;
+		vi.spyOn(fsOps, "unlink").mockImplementation((async (target: string) => {
+			if (!raced && (target === file || target.endsWith(".deleting"))) {
+				raced = true;
+				await b.set(undefined, { key: "k", value: "new" });
+			}
+
+			return unlink(target);
+		}) as never);
+		expect(await a.delete(undefined, "k", [])).toBe(false);
+		expect(raced).toBe(true);
+		expect(await b.get(undefined, "k", [])).toBe("new");
+		await Promise.all([a.close(), b.close()]);
+	});
+
+	test("an entry that another process recovers while this one checks it is left to that process", async () => {
+		const { root, a, b, file } = await twoProcesses();
+		const { read, reports, release } = await readHeldAtCheck(a, file);
+		// When A opens the moved-aside entry to check it again, B's sweep removes it first.
+		// fsOps.open is already the hold's spy, so call the hold's implementation, not the spy.
+		const open = vi.mocked(fsOps.open).getMockImplementation() as (
+			...args: unknown[]
+		) => Promise<unknown>;
+		let swept = false;
+		vi.spyOn(fsOps, "open").mockImplementation((async (target: string, ...rest: unknown[]) => {
+			if (!swept && target.endsWith(".expired")) {
+				swept = true;
+				await b.clearExpired([]);
+			}
+
+			return open(target, ...rest);
+		}) as never);
+		release();
+		expect(await read).toBeUndefined();
+		vi.restoreAllMocks();
+		expect(reports).toEqual([]);
+		expect(existsSync(file)).toBe(false);
+		expect(readdirSync(path.join(root, "tmp"))).toEqual([]);
+		await Promise.all([a.close(), b.close()]);
+	});
+});
+
+describe("directory strategy without hard links", () => {
+	async function withoutHardLinks() {
+		vi.spyOn(fsOps, "link").mockRejectedValue(errno("EPERM"));
+		const { DirectoryStrategy } = await import("../src/strategies/directory.js");
+		const root = path.join(tempDir(), "store");
+		return { DirectoryStrategy, root, lock: path.join(root, "keyv-fs.lock") };
+	}
+
+	test("one process at a time can use the store, and closing releases it", async () => {
+		const { DirectoryStrategy, root, lock } = await withoutHardLinks();
+		const a = new DirectoryStrategy(root, 60_000);
+		const b = new DirectoryStrategy(root, 60_000);
+		await a.load();
+		expect(JSON.parse(readFileSync(lock, "utf8"))).toEqual({ pid: process.pid, host: hostname() });
+		await expect(b.load()).rejects.toThrow(/only one process at a time/);
+		await a.close();
+		expect(existsSync(lock)).toBe(false);
+		await b.load();
+		await b.close();
+	});
+
+	test("a lock that a stopped process left, or a damaged lock, is taken over", async () => {
+		const { DirectoryStrategy } = await withoutHardLinks();
+		const { pid } = spawnSync(process.execPath, ["-e", ""]);
+		for (const content of [JSON.stringify({ pid, host: hostname() }), "", "null", "{}"]) {
+			const root = path.join(tempDir(), "store");
+			mkdirSync(root);
+			writeFileSync(path.join(root, "keyv-fs.lock"), content);
+			const store = new DirectoryStrategy(root, 60_000);
+			await store.load();
+			expect(JSON.parse(readFileSync(path.join(root, "keyv-fs.lock"), "utf8")).pid).toBe(
+				process.pid,
+			);
+			await store.close();
+		}
+	});
+
+	test("a lock held on another computer, or by a process of another user, is kept", async () => {
+		const { DirectoryStrategy, root, lock } = await withoutHardLinks();
+		mkdirSync(root);
+		writeFileSync(lock, JSON.stringify({ pid: process.pid, host: `not-${hostname()}` }));
+		await expect(new DirectoryStrategy(root, 60_000).load()).rejects.toThrow(/on not-/);
+		writeFileSync(lock, JSON.stringify({ pid: 4242, host: hostname() }));
+		vi.spyOn(process, "kill").mockImplementation(() => {
+			throw errno("EPERM");
+		});
+		await expect(new DirectoryStrategy(root, 60_000).load()).rejects.toThrow(/process 4242/);
+		expect(readFileSync(lock, "utf8")).toContain("4242");
+	});
+
+	test("a lock that another process takes after a stale one is removed is kept", async () => {
+		const { DirectoryStrategy, root, lock } = await withoutHardLinks();
+		mkdirSync(root);
+		writeFileSync(lock, "");
+		const writeFile = fsOps.writeFile as (...args: unknown[]) => Promise<void>;
+		let attempts = 0;
+		vi.spyOn(fsOps, "writeFile").mockImplementation((async (target: string, ...rest: unknown[]) => {
+			if (target === lock && ++attempts === 2) {
+				throw errno("EEXIST");
+			}
+
+			return writeFile(target, ...rest);
+		}) as never);
+		await expect(new DirectoryStrategy(root, 60_000).load()).rejects.toThrow(/another process/);
+	});
+
+	test("an error writing the lock fails the load", async () => {
+		const { DirectoryStrategy, root, lock } = await withoutHardLinks();
+		const writeFile = fsOps.writeFile as (...args: unknown[]) => Promise<void>;
+		vi.spyOn(fsOps, "writeFile").mockImplementation((async (target: string, ...rest: unknown[]) => {
+			if (target === lock) {
+				throw errno("EACCES");
+			}
+
+			return writeFile(target, ...rest);
+		}) as never);
+		await expect(new DirectoryStrategy(root, 60_000).load()).rejects.toThrow("EACCES");
+	});
 });
 
 describe("directory strategy recovery of entries being checked", () => {
@@ -771,6 +919,25 @@ describe("directory strategy recovery of entries being checked", () => {
 		expect((errors[0] as KeyvFsCorruptionError).message).toContain("not valid UTF-8");
 		await store.set("k", "new");
 		expect(await store.get("k")).toBe("new");
+		await store.disconnect();
+	});
+
+	test("a damaged entry that the cleanup finds is reported and kept", async () => {
+		const { root, store } = newStore();
+		await store.set("k", "old", Date.now() + 60_000);
+		skipAhead();
+		const file = entryFile(root, "k");
+		// The read finds the expired entry; then the entry is damaged before the cleanup checks it.
+		const hold = holdCall("open", (target) => target === file);
+		const errors = collectErrors(store);
+		const read = store.get("k");
+		await hold.reached;
+		writeFileSync(file, "damaged\n");
+		hold.release();
+		expect(await read).toBeUndefined();
+		expect(errors).toHaveLength(1);
+		expect((errors[0] as KeyvFsCorruptionError).message).toContain("header is not valid");
+		expect(existsSync(file)).toBe(true);
 		await store.disconnect();
 	});
 

@@ -17,26 +17,46 @@ function state(): RegistryState {
 	return holder[REGISTRY];
 }
 
+/** A store path with its symbolic links resolved. */
+export type ResolvedPath = {
+	/** The real absolute path. */
+	real: string;
+	/** The parts of `real` that do not exist yet, from the top down. */
+	missing: string[];
+};
+
 /**
- * The key that identifies a store path in this process: its real absolute path, with symbolic
- * links resolved, so two spellings of one path share a backend. For a path that doesn't exist
- * yet, its nearest existing ancestor is resolved and the rest is appended.
+ * Resolves a store path: its real absolute path, with symbolic links resolved. For a path that
+ * does not exist yet, the nearest existing ancestor is resolved and the rest is appended.
+ * @param storePath - The store file or directory.
+ */
+export function resolvePath(storePath: string): ResolvedPath {
+	const absolute = path.resolve(storePath);
+	const names: string[] = [];
+	for (let existing = absolute; ; existing = path.dirname(existing)) {
+		try {
+			const real = realpathSync.native(existing);
+			return {
+				real: path.join(real, ...names),
+				missing: names.map((_, index) => path.join(real, ...names.slice(0, index + 1))),
+			};
+		} catch {
+			if (path.dirname(existing) === existing) {
+				return { real: absolute, missing: [] };
+			}
+
+			names.unshift(path.basename(existing));
+		}
+	}
+}
+
+/**
+ * The key that identifies a store path in this process: its real path (see
+ * {@link resolvePath}), so two spellings of one path share a backend.
  * @param storePath - The store file or directory.
  */
 export function registryKey(storePath: string): string {
-	const absolute = path.resolve(storePath);
-	const missing: string[] = [];
-	for (let existing = absolute; ; existing = path.dirname(existing)) {
-		try {
-			return path.join(realpathSync.native(existing), ...missing);
-		} catch {
-			if (path.dirname(existing) === existing) {
-				return absolute;
-			}
-
-			missing.unshift(path.basename(existing));
-		}
-	}
+	return resolvePath(storePath).real;
 }
 
 /**

@@ -142,10 +142,10 @@ File names are SHA-256 hashes, sharded into 256 directories by their first two c
 {"value":{"x":1},"expires":1760000660000}
 ```
 
-- **Load** happens on the first operation. It creates the marker file and the `data`, `tmp` and `trash` directories, and cleans up what an interrupted run left in `tmp` and `trash` (sweeps do this too). Nothing is read into memory.
+- **Load** happens on the first operation. It creates the marker file and the `data`, `tmp` and `trash` directories, and cleans up what an interrupted run left in `tmp` and `trash` (sweeps do this too). On a file system without hard links, it also takes the lock file (see [Multiple Processes](#multiple-processes)). Nothing is read into memory.
 - **Read** reads the key's file and checks that its header names the same key and namespace. An expired entry is deleted and reported as missing.
 - **Write** writes the entry to `tmp/`, then renames it into `data/`, so a reader sees the old entry or the new one.
-- **Delete** removes the key's file.
+- **Delete** moves the key's file into `tmp/`, reads its header there, and removes it.
 - **Clear** renames the namespace's directory into `trash/` (one step, whatever its size), then removes it.
 - **Iterator** walks the namespace's directory.
 
@@ -213,7 +213,12 @@ Expired entries are also removed from disk:
 
 - **Every write is atomic.** Data goes to a temporary file that is renamed into place. A process crash leaves the old data or the new data, never a mix.
 - **`await` means saved.** `set`, `setMany`, `delete`, `deleteMany` and `clear` resolve once their change is in the file. Unawaited writes are saved too: a pending save keeps the process running until it is done.
-- **New files are private.** The adapter creates its files readable and writable by their owner only (`0600`), whatever the process umask, since a cache can hold secrets. The `"file"` strategy keeps the permissions of an existing store file, so `chmod` it if other users need to read it. Directories follow the umask.
+- **New files are private.** The adapter creates its files readable and writable by their owner only (`0600`), whatever the process umask, since a cache can hold secrets. The directories that it creates are for their owner only (`0700`). The `"file"` strategy keeps the permissions of an existing store file, so `chmod` it if other users need to read it.
+- **The store path is checked.** The adapter resolves symbolic links in `path` when you create the store. Before it first uses the path, and before it writes into a directory that did not exist then, it checks the path again. The adapter refuses the path with an error in these conditions:
+  - a symbolic link now replaces a part of the path that was missing;
+  - another user created a directory of the path that was missing.
+
+  Thus another user cannot send your data to a different location. Keep the store in a directory that other users cannot write to.
 - **Call `disconnect()` before `process.exit()`.** It waits for writes already called, saves them, and releases the store. `process.exit()` does not wait for anything.
 - **No fsync.** Data reaches the operating system, not necessarily the disk. After a power loss or an operating system crash, the latest writes can be lost. A store file left damaged is moved aside (see below) and the store starts empty; a file left empty (0 bytes) is loaded as an empty store.
 - **If a save fails** (for example, the disk is full), the write rejects. The value stays in memory and the next save retries it, so a write that rejected can still reach the file later. In the same way, `disconnect()` reports a failed save even when its retry then succeeded.
@@ -223,7 +228,8 @@ Expired entries are also removed from disk:
 Within one process, every `KeyvFs` on the same path shares one store, so they never overwrite each other. This works across CommonJS and ES module copies of the package too.
 
 - **`"file"` strategy: one process per file.** Each process holds the whole store in memory and saves all of it, so two processes writing one file overwrite each other's changes. There is no lock; give each process its own file, or use the `"directory"` strategy. Worker threads count as separate processes.
-- **`"directory"` strategy: several processes are fine.** Run them as the same user, since entry files are private to their owner. Each write replaces one file atomically, and the last write to a key wins. Removing an expired entry never deletes a newer write from another process. To check, it moves the entry aside for a moment; in that moment, the other process misses the key (a `get` returns `undefined`, a `delete` returns `false`) until the entry is put back. If a process crashes in that moment, the entry is put back by the next process that opens the store or sweeps it. A `clear()` in one process and a `set` in another are not ordered. On file systems without hard links (such as FAT and exFAT), use one process per directory store: there an entry is put back by moving it, which can, rarely, replace a write another process made at that instant.
+- **`"directory"` strategy: several processes are fine.** Run them as the same user, since entry files are private to their owner. Each write replaces one file atomically, and the last write to a key wins. Removing an expired entry never deletes a newer write from another process. To check, it moves the entry aside for a moment; in that moment, the other process misses the key (a `get` returns `undefined`, a `delete` returns `false`) until the entry is put back. If a process crashes in that moment, the entry is put back by the next process that opens the store or sweeps it. A `delete` also moves the entry aside before it reads it, so it deletes only the entry that it reports on: a write from another process after that move is kept. A `clear()` in one process and a `set` in another are not ordered.
+- **File systems without hard links** (such as FAT and exFAT): only one process at a time can use a directory store. The first process to open the store writes a lock file, `keyv-fs.lock`, and removes it when it disconnects. A second process gets an error until then. If the process that holds the lock stopped without its `disconnect()`, a process on the same computer takes over the lock. If the lock is from a process on a different computer, delete the file yourself when that process is stopped.
 
 Network file systems are not supported.
 
@@ -239,7 +245,7 @@ keyv.on('error', (error) => console.error(error));
 
 **A damaged store file** (cut short, or with a line that doesn't parse) is renamed to `<path>.corrupt-<time>-<random>`, and the store starts empty. A `KeyvFsCorruptionError` with `quarantinePath` is emitted once, during the operation that found it. With an `error` listener that operation then succeeds; with none, that one operation rejects and the next succeeds. Nothing is lost: the damaged file is still there for you to inspect.
 
-**A damaged entry file** (`"directory"` strategy) is treated as missing, and a `KeyvFsCorruptionError` is emitted each time it is read. The next write of that key replaces it, and deleting the key removes it.
+**A damaged entry file** (`"directory"` strategy) is treated as missing, and a `KeyvFsCorruptionError` is emitted each time it is read. The expiry sweep and `clearExpired()` also emit one for each damaged entry that they find, and keep the file. The next write of that key replaces it, and deleting the key removes it.
 
 Errors from the background expiry sweep go to `error` listeners, and are dropped when there are none. They never crash the process.
 
@@ -410,7 +416,7 @@ Resolves once every write already called through this instance is on disk, witho
 
 ### .clearExpired()
 
-Removes expired entries from every namespace now, instead of waiting for the next sweep.
+Removes expired entries from every namespace now, instead of waiting for the next sweep. With the `"directory"` strategy, it emits a `KeyvFsCorruptionError` for each damaged entry that it finds.
 
 ### .disconnect()
 

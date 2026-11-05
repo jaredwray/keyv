@@ -1,4 +1,7 @@
+import { lstatSync } from "node:fs";
 import type { Namespace } from "../codec.js";
+import { runtime } from "../io.js";
+import { type ResolvedPath, resolvePath } from "../registry.js";
 
 /**
  * An entry to write: the key, the value Keyv passed, and its absolute expiry.
@@ -33,6 +36,7 @@ export abstract class Strategy {
 	private _notice: Error | undefined;
 	private _sweeping: Promise<void> | undefined;
 	private readonly _previousClose: Promise<void> | undefined;
+	private readonly _resolved: ResolvedPath;
 
 	/**
 	 * @param path - The store file or directory.
@@ -43,6 +47,7 @@ export abstract class Strategy {
 		this.path = path;
 		this.expiredCheckDelay = expiredCheckDelay;
 		this._previousClose = previousClose;
+		this._resolved = resolvePath(path);
 	}
 
 	/** Whether the store has been loaded. */
@@ -106,28 +111,35 @@ export abstract class Strategy {
 
 	/**
 	 * Removes expired entries now.
+	 * @param reports - Receives the damaged entries that the sweep finds.
 	 */
-	public async clearExpired(): Promise<void> {
+	public async clearExpired(reports: Reports = []): Promise<void> {
 		this.lastSweep = Date.now();
-		await this.sweep();
+		await this.sweep(reports);
 	}
 
 	/**
 	 * Starts an expiry sweep in the background when `expiredCheckDelay` has passed since the last
-	 * one and none is running. Called after writes. The sweep never rejects: its error goes to
-	 * `report`.
-	 * @param report - Receives an error from the sweep.
+	 * one and none is running. Called after writes. The sweep never rejects: the damaged entries
+	 * it finds, and then its error, go to `report`.
+	 * @param report - Receives each damaged entry and an error from the sweep.
 	 */
 	public sweepIfDue(report: BackgroundReporter): void {
 		if (this._sweeping || Date.now() - this.lastSweep < this.expiredCheckDelay) {
 			return;
 		}
 
-		this._sweeping = this.clearExpired()
+		const reports: Reports = [];
+		this._sweeping = this.clearExpired(reports)
 			.catch((error: unknown) => {
-				try {
-					report(error);
-				} catch {}
+				reports.push(error as Error);
+			})
+			.then(() => {
+				for (const found of reports) {
+					try {
+						report(found);
+					} catch {}
+				}
 			})
 			.finally(() => {
 				this._sweeping = undefined;
@@ -142,16 +154,57 @@ export abstract class Strategy {
 		this._notice = notice;
 	}
 
+	/**
+	 * Checks that the store path still leads where it did when this backend was created. Another
+	 * user can put a symbolic link, or a directory of their own, where a missing directory of the
+	 * path was. Then the store refuses the path, so it never writes to a place that the other user
+	 * selected.
+	 * @throws {Error} If the path now leads somewhere else, or through another user's directory.
+	 */
+	protected checkPath(): void {
+		const { real } = resolvePath(this.path);
+		if (real !== this._resolved.real) {
+			throw new Error(
+				`@keyv/fs: ${this.path} now leads to ${real}. A symbolic link was put in the path after the store was created, so @keyv/fs does not use it.`,
+			);
+		}
+
+		const uid = runtime.uid();
+		if (uid === undefined) {
+			return;
+		}
+
+		for (const part of this._resolved.missing) {
+			let stats: ReturnType<typeof lstatSync>;
+			try {
+				stats = lstatSync(part);
+			} catch {
+				// Still missing, and so is all of the path below it.
+				return;
+			}
+
+			if (stats.isDirectory() && stats.uid !== uid) {
+				throw new Error(
+					`@keyv/fs: another user created ${part} after the store was created, so @keyv/fs does not use ${this.path}.`,
+				);
+			}
+		}
+	}
+
 	private async loadOnce(): Promise<void> {
 		await this._previousClose?.catch(() => {});
+		this.checkPath();
 		await this.read();
 	}
 
 	/** Reads the store from disk. Called once per successful load. */
 	protected abstract read(): Promise<void>;
 
-	/** Removes expired entries. */
-	protected abstract sweep(): Promise<void>;
+	/**
+	 * Removes expired entries.
+	 * @param reports - Receives the damaged entries that the sweep finds.
+	 */
+	protected abstract sweep(reports: Reports): Promise<void>;
 
 	/** Resolves once every write made so far is on disk. */
 	public abstract flush(): Promise<void>;

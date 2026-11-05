@@ -1,3 +1,4 @@
+import { hostname } from "node:os";
 import path from "node:path";
 import {
 	decodeValue,
@@ -22,6 +23,7 @@ import {
 	hasCode,
 	KeyedMutex,
 	mapLimit,
+	PRIVATE_DIRECTORY_MODE,
 	PRIVATE_FILE_MODE,
 	RwGate,
 	randomHex,
@@ -39,6 +41,10 @@ const STALE_TEMPORARY_MS = 15 * 60 * 1000;
 const NAMESPACE_DIRECTORY = /^(?:_|n-[0-9a-f]{64})$/;
 const SHARD_DIRECTORY = /^[0-9a-f]{2}$/;
 const ENTRY_FILE = /^[0-9a-f]{64}\.kv$/;
+/** An entry being deleted: `<pid>-<time moved, ms>-<random>.deleting`. */
+const DELETING_FILE = /^\d+-(\d+)-[0-9a-f]+\.deleting$/;
+/** Create a directory for the owner only. */
+const PRIVATE = { recursive: true, mode: PRIVATE_DIRECTORY_MODE } as const;
 
 /** Where a key's entry lives. */
 type Location = { shard: string; file: string };
@@ -67,6 +73,8 @@ export class DirectoryStrategy extends Strategy {
 	private readonly _shards = new Set<string>();
 	private readonly _cleanUps = new Set<Promise<void>>();
 	private _closing = false;
+	/** The lock file, when this backend holds one (see lock()). */
+	private _lock: string | undefined;
 	private _background: Promise<void> = Promise.resolve();
 
 	private get dataDirectory(): string {
@@ -85,9 +93,13 @@ export class DirectoryStrategy extends Strategy {
 		if (await this.checkMarker()) {
 			// A new store. In an existing one the directories are already there, and writes and
 			// clears make any that went missing.
-			await fsOps.mkdir(this.dataDirectory, { recursive: true });
-			await fsOps.mkdir(this.temporaryDirectory, { recursive: true });
-			await fsOps.mkdir(this.trashDirectory, { recursive: true });
+			await fsOps.mkdir(this.dataDirectory, PRIVATE);
+			await fsOps.mkdir(this.temporaryDirectory, PRIVATE);
+			await fsOps.mkdir(this.trashDirectory, PRIVATE);
+		}
+
+		if (!(await this.hasHardLinks())) {
+			await this.lock();
 		}
 
 		// Before the first operation, so it sees any entry this puts back.
@@ -169,7 +181,7 @@ export class DirectoryStrategy extends Strategy {
 		const release = await this._gate.exclusive();
 		let moved: string | undefined;
 		try {
-			await fsOps.mkdir(this.trashDirectory, { recursive: true });
+			await fsOps.mkdir(this.trashDirectory, PRIVATE);
 			const target = path.join(
 				this.trashDirectory,
 				`${path.basename(source)}-${Date.now()}-${randomHex(4)}`,
@@ -231,10 +243,11 @@ export class DirectoryStrategy extends Strategy {
 	}
 
 	/**
-	 * Removes expired entries in every namespace. A directory or entry that can't be read doesn't
-	 * stop the rest: the sweep goes on, then rejects with the first error.
+	 * Removes expired entries in every namespace. A damaged entry is kept, and goes to `reports`.
+	 * A directory or entry that can't be read doesn't stop the rest: the sweep goes on, then
+	 * rejects with the first error.
 	 */
-	protected async sweep(): Promise<void> {
+	protected async sweep(reports: Reports): Promise<void> {
 		await this.purge();
 		const errors: unknown[] = [];
 		const list = (directory: string) =>
@@ -258,8 +271,20 @@ export class DirectoryStrategy extends Strategy {
 				await mapLimit(names, CONCURRENCY, async (name) => {
 					const file = path.join(shardDirectory, name);
 					try {
-						if (isExpiredEntry(await readFirstLine(file))) {
-							await this.withGate(() => this.removeIfExpired(file));
+						const line = await readFirstLine(file);
+						if (line === undefined) {
+							return;
+						}
+
+						const header = parseEntryHeader(line);
+						if (
+							header === undefined ||
+							`${hashName(header.key)}.kv` !== name ||
+							this.namespaceDirectory(header.namespace) !== directory
+						) {
+							reports.push(this.corruption(file, "its header is not valid"));
+						} else if (isExpired(header.expires, Date.now())) {
+							await this.withGate(() => this.removeIfExpired(file, reports));
 						}
 					} catch (error) {
 						errors.push(error);
@@ -283,6 +308,10 @@ export class DirectoryStrategy extends Strategy {
 		this._closing = true;
 		await Promise.all(this._cleanUps);
 		await this._background;
+		if (this._lock !== undefined) {
+			await unlinkIfExists(this._lock);
+			this._lock = undefined;
+		}
 	}
 
 	/**
@@ -300,7 +329,7 @@ export class DirectoryStrategy extends Strategy {
 			const temporary = await this.writeTemporary(encodeEntryFile(ns, key, entry));
 			try {
 				if (!this._shards.has(shard)) {
-					await fsOps.mkdir(shard, { recursive: true });
+					await fsOps.mkdir(shard, PRIVATE);
 					this._shards.add(shard);
 				}
 
@@ -312,7 +341,7 @@ export class DirectoryStrategy extends Strategy {
 						throw error;
 					}
 
-					await fsOps.mkdir(shard, { recursive: true });
+					await fsOps.mkdir(shard, PRIVATE);
 					await renameWithRetry(temporary, file);
 				}
 			} catch (error) {
@@ -335,7 +364,7 @@ export class DirectoryStrategy extends Strategy {
 				throw error;
 			}
 
-			await fsOps.mkdir(this.temporaryDirectory, { recursive: true });
+			await fsOps.mkdir(this.temporaryDirectory, PRIVATE);
 			await write();
 		}
 
@@ -343,25 +372,33 @@ export class DirectoryStrategy extends Strategy {
 	}
 
 	/**
-	 * Deletes a key's entry.
+	 * Deletes a key's entry. The entry is moved into `tmp/` first, and read and deleted there. So
+	 * the entry that this reads is the entry that it deletes: a write from another process that
+	 * comes after the move is kept.
 	 * @returns Whether a live entry was deleted.
 	 */
 	private async remove(ns: Namespace, key: string): Promise<boolean> {
 		const { file } = this.locate(ns, key);
 		return this._mutex.run(file, async () => {
-			const line = await readFirstLine(file);
-			if (line === undefined) {
+			const parked = path.join(
+				this.temporaryDirectory,
+				`${process.pid}-${Date.now()}-${randomHex(8)}.deleting`,
+			);
+			if (!(await this.park(file, parked))) {
 				return false;
 			}
 
-			const header = parseEntryHeader(line);
-			await unlinkIfExists(file);
-			return (
-				header !== undefined &&
-				header.key === key &&
-				header.namespace === ns &&
-				!isExpired(header.expires, Date.now())
-			);
+			try {
+				const header = await readHeaderLine(parked);
+				return (
+					header !== undefined &&
+					header.key === key &&
+					header.namespace === ns &&
+					!isExpired(header.expires, Date.now())
+				);
+			} finally {
+				await unlinkIfExists(parked);
+			}
 		});
 	}
 
@@ -375,9 +412,11 @@ export class DirectoryStrategy extends Strategy {
 			return Promise.resolve();
 		}
 
-		const cleaning = this.withGate(() => this.removeIfExpired(file)).catch((error: unknown) => {
-			reports.push(error as Error);
-		});
+		const cleaning = this.withGate(() => this.removeIfExpired(file, reports)).catch(
+			(error: unknown) => {
+				reports.push(error as Error);
+			},
+		);
 		this._cleanUps.add(cleaning);
 		void cleaning.then(() => this._cleanUps.delete(cleaning));
 		return cleaning;
@@ -407,11 +446,17 @@ export class DirectoryStrategy extends Strategy {
 	 * An entry left in `tmp/` by a crash is put back by {@link DirectoryStrategy.purge}, at the
 	 * next load or sweep of any process. Recovering an entry that a running process is still
 	 * checking is safe too: whichever of them puts it back or removes it first wins, and the
-	 * other finds it gone.
+	 * other finds it gone. A damaged entry is kept, and goes to `reports`.
 	 */
-	private async removeIfExpired(file: string): Promise<void> {
+	private async removeIfExpired(file: string, reports: Reports): Promise<void> {
 		await this._mutex.run(file, async () => {
-			if (!isExpiredEntry(await readFirstLine(file))) {
+			const line = await readFirstLine(file);
+			const header = parseEntryHeader(line ?? "");
+			if (line !== undefined && header === undefined) {
+				reports.push(this.corruption(file, "its header is not valid"));
+			}
+
+			if (header === undefined || !isExpired(header.expires, Date.now())) {
 				return;
 			}
 
@@ -422,7 +467,8 @@ export class DirectoryStrategy extends Strategy {
 
 			let expired = false;
 			try {
-				expired = isExpiredEntry(await readFirstLine(parked));
+				const header = await readHeaderLine(parked);
+				expired = header !== undefined && isExpired(header.expires, Date.now());
 			} finally {
 				if (expired) {
 					await unlinkIfExists(parked);
@@ -452,7 +498,7 @@ export class DirectoryStrategy extends Strategy {
 				}
 
 				// Either the entry is gone or tmp/ is: make tmp/ and try once more.
-				await fsOps.mkdir(this.temporaryDirectory, { recursive: true });
+				await fsOps.mkdir(this.temporaryDirectory, PRIVATE);
 			}
 		}
 	}
@@ -460,8 +506,8 @@ export class DirectoryStrategy extends Strategy {
 	/**
 	 * Puts a moved-aside entry back at its path, unless a newer write took the path meanwhile
 	 * (EEXIST) or the namespace was cleared (ENOENT). On a file system without hard links (FAT,
-	 * some network shares) it is moved back instead. A move would replace a newer write, so it
-	 * checks for one first; a write landing between that check and the move can still be lost.
+	 * some network shares) it is moved back instead, if no newer write took the path. There, the
+	 * store holds a lock (see lock()), so no other process can write in between.
 	 */
 	private async restore(parked: string, file: string): Promise<void> {
 		try {
@@ -619,7 +665,9 @@ export class DirectoryStrategy extends Strategy {
 		// moment write the same bytes. An empty marker can only be left by an older write that
 		// was cut short, so it is written again.
 		if (text === undefined || text.trim() === "") {
-			await atomicWriteFile(marker, [encodeStoreHeader("directory")]);
+			await atomicWriteFile(marker, [encodeStoreHeader("directory")], undefined, () =>
+				this.checkPath(),
+			);
 			return true;
 		}
 
@@ -642,6 +690,61 @@ export class DirectoryStrategy extends Strategy {
 	}
 
 	/**
+	 * Whether the file system of the store can make hard links. Expiry cleanup uses a hard link to
+	 * put an entry back without a risk to replace a newer write from another process.
+	 */
+	private async hasHardLinks(): Promise<boolean> {
+		const probe = await this.writeTemporary("");
+		const linked = `${probe}.link`;
+		try {
+			await fsOps.link(probe, linked);
+			return true;
+		} catch {
+			return false;
+		} finally {
+			await fsOps.unlink(linked).catch(() => {});
+			await fsOps.unlink(probe).catch(() => {});
+		}
+	}
+
+	/**
+	 * Takes the lock file of the store, `keyv-fs.lock`, for this process. Without hard links,
+	 * expiry cleanup is safe only when one process uses the store, so a second process gets an
+	 * error. This process takes over a lock that a stopped process on this computer left.
+	 * @throws {Error} If another process holds the lock.
+	 */
+	private async lock(): Promise<void> {
+		const lock = path.join(this.path, "keyv-fs.lock");
+		const owner: LockOwner = { pid: process.pid, host: hostname() };
+		for (let attempt = 1; ; attempt++) {
+			try {
+				await fsOps.writeFile(lock, JSON.stringify(owner), {
+					flag: "wx",
+					mode: PRIVATE_FILE_MODE,
+				});
+				this._lock = lock;
+				return;
+			} catch (error) {
+				if (!hasCode(error, "EEXIST")) {
+					throw error;
+				}
+			}
+
+			const holder = await readLockOwner(lock);
+			if (attempt > 1 || (holder !== undefined && isRunning(holder))) {
+				const who =
+					holder === undefined ? "another process" : `process ${holder.pid} on ${holder.host}`;
+				throw new Error(
+					`@keyv/fs: ${this.path} is on a file system without hard links, so only one process at a time can use it, and ${who} has it open. If no process uses it, delete ${lock}.`,
+				);
+			}
+
+			// The process that held the lock stopped without releasing it.
+			await unlinkIfExists(lock);
+		}
+	}
+
+	/**
 	 * Cleans up after interrupted work, by this process or another one: puts back entries that
 	 * were being checked for expiry, removes temporary files from interrupted writes, and, in the
 	 * background, removes cleared namespaces left in the trash. Runs at load and before each
@@ -656,6 +759,17 @@ export class DirectoryStrategy extends Strategy {
 				// Whatever its age: its file time is when the entry was written, not when it was
 				// moved here. If it can't be put back or removed now, it stays for the next run.
 				await this.recover(file).catch(() => {});
+				continue;
+			}
+
+			const deleting = DELETING_FILE.exec(name);
+			if (deleting !== null) {
+				// A delete that a process did not finish. Its name holds the time of the move, so a
+				// delete that is still running is not touched.
+				if (now - Number(deleting[1]) > STALE_TEMPORARY_MS) {
+					await fsOps.unlink(file).catch(() => {});
+				}
+
 				continue;
 			}
 
@@ -682,7 +796,7 @@ export class DirectoryStrategy extends Strategy {
 	 * newer entry. An expired or damaged one is removed.
 	 */
 	private async recover(parked: string): Promise<void> {
-		const header = parseEntryHeader((await readFirstLine(parked)) ?? "");
+		const header = await readHeaderLine(parked);
 		if (header === undefined || isExpired(header.expires, Date.now())) {
 			await unlinkIfExists(parked);
 			return;
@@ -702,13 +816,52 @@ export class DirectoryStrategy extends Strategy {
 }
 
 /**
- * Whether an entry file's header line says it has expired. A missing or damaged entry has not:
- * there is nothing to delete.
- * @param line - The header line, or `undefined` when the file doesn't exist.
+ * Reads the header of an entry file.
+ * @param file - The entry file.
+ * @returns The header, or `undefined` when the file is missing or its header is damaged.
  */
-function isExpiredEntry(line: string | undefined): boolean {
-	const header = parseEntryHeader(line ?? "");
-	return header !== undefined && isExpired(header.expires, Date.now());
+async function readHeaderLine(file: string): Promise<EntryHeader | undefined> {
+	const line = await readFirstLine(file);
+	return line === undefined ? undefined : parseEntryHeader(line);
+}
+
+/** The process that holds the lock file of a store. */
+type LockOwner = { pid: number; host: string };
+
+/**
+ * Reads the owner from a lock file.
+ * @param lock - The lock file.
+ * @returns The owner, or `undefined` when the file is missing or damaged (for example, a process
+ * stopped while it wrote the file).
+ */
+async function readLockOwner(lock: string): Promise<LockOwner | undefined> {
+	try {
+		const owner = JSON.parse(await fsOps.readFile(lock, "utf8")) as Partial<LockOwner> | null;
+		if (typeof owner?.pid === "number" && typeof owner.host === "string") {
+			return { pid: owner.pid, host: owner.host };
+		}
+	} catch {}
+
+	return undefined;
+}
+
+/**
+ * Whether the process that holds a lock still runs. A process on another computer can't be
+ * checked, so it counts as running.
+ * @param owner - The holder of the lock.
+ */
+function isRunning(owner: LockOwner): boolean {
+	if (owner.host !== hostname()) {
+		return true;
+	}
+
+	try {
+		process.kill(owner.pid, 0);
+		return true;
+	} catch (error) {
+		// EPERM: the process runs as another user.
+		return !hasCode(error, "ESRCH");
+	}
 }
 
 /**

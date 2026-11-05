@@ -2,7 +2,7 @@ import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { hashName } from "../src/codec.js";
-import KeyvFs from "../src/index.js";
+import KeyvFs, { type KeyvFsCorruptionError } from "../src/index.js";
 import { fsOps } from "../src/io.js";
 import type { Strategy } from "../src/strategies/strategy.js";
 import { errno, freshLocation, strategies, tempDir, tick } from "./helpers.js";
@@ -187,7 +187,7 @@ describe("directory strategy", () => {
 		await store.disconnect();
 	});
 
-	test("the sweep skips foreign and damaged files", async () => {
+	test("the sweep skips foreign files, and reports and keeps damaged entries", async () => {
 		const root = path.join(tempDir(), "store");
 		const store = new KeyvFs({ path: root, strategy: "directory" });
 		await store.set("k", "v");
@@ -195,13 +195,51 @@ describe("directory strategy", () => {
 		writeFileSync(path.join(root, "data", ".DS_Store"), "x");
 		mkdirSync(path.join(root, "data", "_", "zz"));
 		writeFileSync(path.join(root, "data", "_", "notes.txt"), "x");
-		const file = entryFile(root, "damaged");
-		mkdirSync(path.dirname(file), { recursive: true });
-		writeFileSync(file, "not a header\n");
+		const damaged = entryFile(root, "damaged");
+		mkdirSync(path.dirname(damaged), { recursive: true });
+		writeFileSync(damaged, "not a header\n");
+		// A valid header in the wrong place: another key's file, and another namespace's file.
+		const otherKey = entryFile(root, "other key");
+		mkdirSync(path.dirname(otherKey), { recursive: true });
+		writeFileSync(otherKey, '{"format":"keyv-fs","kind":"entry","version":1,"k":"k","t":"s"}\nv');
+		const otherNamespace = entryFile(root, "k", "ns");
+		mkdirSync(path.dirname(otherNamespace), { recursive: true });
+		writeFileSync(
+			otherNamespace,
+			'{"format":"keyv-fs","kind":"entry","version":1,"k":"k","t":"s"}\nv',
+		);
+		const errors: unknown[] = [];
+		store.on("error", (error) => errors.push(error));
 		await store.clearExpired();
-		expect(existsSync(file)).toBe(true);
-		expect(readdirSync(path.join(root, "data")).sort()).toEqual([".DS_Store", "_"]);
+		expect(errors.map((error) => (error as KeyvFsCorruptionError).path).sort()).toEqual(
+			[damaged, otherKey, otherNamespace].sort(),
+		);
+		expect([damaged, otherKey, otherNamespace].every((file) => existsSync(file))).toBe(true);
+		expect(readdirSync(path.join(root, "data")).sort()).toEqual([
+			".DS_Store",
+			"_",
+			`n-${hashName("ns")}`,
+		]);
 		await store.disconnect();
+	});
+
+	test("a background sweep reports the damaged entries it finds", async () => {
+		vi.useFakeTimers({ toFake: ["Date"] });
+		vi.setSystemTime(1_000_000);
+		const root = path.join(tempDir(), "store");
+		const store = new KeyvFs({ path: root, strategy: "directory", expiredCheckDelay: 1000 });
+		await store.set("k", "v");
+		const { mkdirSync, writeFileSync } = await import("node:fs");
+		const damaged = entryFile(root, "damaged");
+		mkdirSync(path.dirname(damaged), { recursive: true });
+		writeFileSync(damaged, "not a header\n");
+		const errors: unknown[] = [];
+		store.on("error", (error) => errors.push(error));
+		vi.setSystemTime(1_002_000);
+		await store.set("trigger", "v");
+		await tick();
+		await store.disconnect();
+		expect(errors).toMatchObject([{ path: damaged }]);
 	});
 
 	test("clearExpired rejects when the directory can't be read", async () => {

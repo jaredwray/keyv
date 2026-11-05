@@ -269,6 +269,8 @@ export class FileStrategy extends Strategy {
 	 * the group commit knows exactly which changes the save includes.
 	 */
 	private async persist(): Promise<void> {
+		// Before each save, while the directory can still be missing: see checkPath().
+		this.checkPath();
 		// The snapshot leaves out every expired entry, including those reads already dropped.
 		this._pruned = false;
 		const now = Date.now();
@@ -283,7 +285,7 @@ export class FileStrategy extends Strategy {
 		}
 
 		lines.push(encodeCheckpoint(lines.length - 1));
-		await atomicWriteFile(this.path, lines, this._mode);
+		await atomicWriteFile(this.path, lines, this._mode, () => this.checkPath());
 	}
 
 	/**
