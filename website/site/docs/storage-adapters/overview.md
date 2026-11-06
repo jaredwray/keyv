@@ -20,6 +20,7 @@ Keyv is a thin API over a store. Performance is almost entirely the backend's; K
 | Valkey GLIDE | [@keyv/valkey-glide](/docs/storage-adapters/valkey-glide/) | Yes (`PXAT`) | Official GLIDE client, AZ affinity, cluster-aware multi-key |
 | MongoDB | [@keyv/mongo](/docs/storage-adapters/mongo/) | TTL index (lazy sweep) | Revalidated in Keyv |
 | SQLite | [@keyv/sqlite](/docs/storage-adapters/sqlite/) | `expires` column | Node, better-sqlite3, bun:sqlite |
+| File system | [@keyv/fs](/docs/storage-adapters/fs/) | Stored expiry, swept | One file, or one file per key |
 | PostgreSQL | [@keyv/postgres](/docs/storage-adapters/postgres/) | `expires` column | |
 | MySQL | [@keyv/mysql](/docs/storage-adapters/mysql/) | `expires` column | Interval sweeper |
 | Etcd | [@keyv/etcd](/docs/storage-adapters/etcd/) | Leases | |
@@ -75,6 +76,8 @@ Keyv itself is not the bottleneck. Compare **drivers and runtimes**, not Keyv vs
 | better-sqlite3 | ~32% slower | ~44K |
 | node:sqlite | ~33% slower | ~43K |
 | sqlite3 (legacy) | ~75% slower | ~16K |
+
+**File system**: [@keyv/fs](/docs/storage-adapters/fs/#benchmarks) is benchmarked against keyv-file, with both of its strategies.
 
 **BigMap vs `Map`**: native `Map` is faster below the ~16.7 million entry limit. [@keyv/bigmap](/docs/storage-adapters/bigmap/) exists to go beyond that limit by hashing across inner Maps.
 

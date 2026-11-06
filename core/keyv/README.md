@@ -94,6 +94,7 @@ npm install --save @keyv/mysql
 npm install --save @keyv/etcd
 npm install --save @keyv/memcache
 npm install --save @keyv/dynamo
+npm install --save @keyv/fs
 ```
 
 First, create a new Keyv instance. 
@@ -429,6 +430,7 @@ MySQL | [@keyv/mysql](https://github.com/jaredwray/keyv/tree/main/storage/mysql)
 Etcd | [@keyv/etcd](https://github.com/jaredwray/keyv/tree/main/storage/etcd) | Yes
 Memcache | [@keyv/memcache](https://github.com/jaredwray/keyv/tree/main/storage/memcache) | Yes
 DynamoDB | [@keyv/dynamo](https://github.com/jaredwray/keyv/tree/main/storage/dynamo) | Yes
+File system | [@keyv/fs](https://github.com/jaredwray/keyv/tree/main/storage/fs) | No
 
 # Third-party Storage Adapters
 

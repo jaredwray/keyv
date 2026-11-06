@@ -82,7 +82,7 @@ Thousands of npm packages depend on Keyv directly or through those libraries. If
 
 ### Storage adapters
 
-Official adapters wrap Redis, Valkey, MongoDB, SQLite, PostgreSQL, MySQL, Etcd, Memcache, DynamoDB, and Cloudflare KV. Pass any of them as `store`. See [Storage Adapters](/docs/storage-adapters/overview/).
+Official adapters wrap Redis, Valkey, MongoDB, SQLite, PostgreSQL, MySQL, Etcd, Memcache, DynamoDB, Cloudflare KV, and the local file system. Pass any of them as `store`. See [Storage Adapters](/docs/storage-adapters/overview/).
 
 **Built-in adapters** ship in the `keyv` package:
 

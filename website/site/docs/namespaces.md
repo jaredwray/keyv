@@ -81,7 +81,7 @@ A namespace that extends another with the separator isn't kept apart from it:
 
 Keep the separator out of namespace names when namespaces have to stay apart. With the default `::`, names that contain a single `:`, such as `users:archive`, stay apart from `users`. Valkey's `useSets: true` doesn't change this: it builds keys the same way, and its `iterator()` still finds entries by prefix.
 
-SQLite, PostgreSQL, MySQL, and MongoDB keep the namespace in its own column or field, so their namespaces never overlap. A bridge around an adapter that handles its own namespace leaves the keys to that adapter, so it behaves like the adapter it wraps.
+SQLite, PostgreSQL, MySQL, and MongoDB keep the namespace in its own column or field, and @keyv/fs stores it next to the key, so their namespaces never overlap. A bridge around an adapter that handles its own namespace leaves the keys to that adapter, so it behaves like the adapter it wraps.
 
 ## Embedding Keyv in a library
 
