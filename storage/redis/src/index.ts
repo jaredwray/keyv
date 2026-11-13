@@ -1366,6 +1366,13 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 			this._namespaceSeparator = options.namespaceSeparator;
 		}
 
+		// v5 used keyPrefixSeparator. Plain JavaScript can still pass it, and then keys change without notice.
+		if ("keyPrefixSeparator" in options) {
+			console.warn(
+				`@keyv/redis: keyPrefixSeparator is now namespaceSeparator. The adapter ignores keyPrefixSeparator and uses "${this._namespaceSeparator}".`,
+			);
+		}
+
 		if (options.clearBatchSize !== undefined && options.clearBatchSize > 0) {
 			this._clearBatchSize = options.clearBatchSize;
 		}

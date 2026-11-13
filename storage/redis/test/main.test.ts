@@ -1,7 +1,7 @@
 import process from "node:process";
 import { faker } from "@faker-js/faker";
 import { createClient, type RedisClientType } from "@redis/client";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import KeyvRedis, { createKeyv, RedisErrorMessages } from "../src/index.js";
 
 const redisUri = process.env.REDIS_URI ?? "redis://localhost:6379";
@@ -129,6 +129,17 @@ describe("KeyvRedis", () => {
 		expect(keyvRedis.namespaceSeparator).toBe("->");
 		keyvRedis.namespaceSeparator = "";
 		expect(keyvRedis.namespaceSeparator).toBe("");
+	});
+
+	test("should log a warning when the removed keyPrefixSeparator option is set", () => {
+		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+		const options = { namespace: "test", keyPrefixSeparator: ":" };
+		const keyvRedis = new KeyvRedis("redis://localhost:6379", options);
+		expect(keyvRedis.namespaceSeparator).toBe("::");
+		expect(warnSpy).toHaveBeenCalledWith(
+			'@keyv/redis: keyPrefixSeparator is now namespaceSeparator. The adapter ignores keyPrefixSeparator and uses "::".',
+		);
+		warnSpy.mockRestore();
 	});
 
 	test("should not set clearBatchSize when the value is 0 or less", () => {
