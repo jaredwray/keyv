@@ -19,25 +19,6 @@ allowBuilds:
 minimumReleaseAge: 10080
 minimumReleaseAgeStrict: true
 minimumReleaseAgeIgnoreMissingTime: false
-# happy-dom@21.0.4 fixes GHSA-834v-8h66-3h79 / CVE-2026-115895 and was
-# published 2026-10-20, inside the 7-day cooldown. Exact version only.
-# Needs Jared's sign-off.
-# docula@3.0.2 depends on undici ^8.10.2 (8.11.2 is still inside the
-# Oct 15 undici advisories, fixed in 8.12.2). Published 2026-10-19,
-# inside the 7-day cooldown. Exact version only.
-# Needs Jared's sign-off.
-# @jaredwray/fumanchu@4.7.5 depends on markdown-it ^15.0.3
-# (CVE-2026-111758, fixed in 15.0.3; CVE-2026-111759, fixed in 15.0.2).
-# Published 2026-10-26, inside the 7-day cooldown. Exact version only.
-# Needs Jared's sign-off.
-# mongodb@7.8.0 fixes CVE-2026-119179 (NODE-7958). Published 2026-10-30,
-# inside the 7-day cooldown. Exact version only.
-# Needs Jared's sign-off.
-minimumReleaseAgeExclude:
-  - happy-dom@21.0.4
-  - docula@3.0.2
-  - "@jaredwray/fumanchu@4.7.5"
-  - mongodb@7.8.0
 trustPolicy: no-downgrade
 strictDepBuilds: true
 dangerouslyAllowAllBuilds: false
