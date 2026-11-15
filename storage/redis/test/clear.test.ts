@@ -25,8 +25,8 @@ function createFakeClient(
 	return client;
 }
 
-async function createAdapter(client: ReturnType<typeof createFakeClient>) {
-	const adapter = new KeyvRedis(undefined, { namespace: "ns" });
+async function createAdapter(client: ReturnType<typeof createFakeClient>, throwOnErrors = false) {
+	const adapter = new KeyvRedis(undefined, { namespace: "ns", throwOnErrors });
 	adapter.client = client as unknown as RedisClientType;
 
 	const errors: unknown[] = [];
@@ -63,30 +63,60 @@ describe("clear()", () => {
 		expect(errors).toEqual([batchError]);
 	});
 
-	test("keeps a pending delete handled when the next SCAN fails", async () => {
-		const scanError = new Error("Connection is closed.");
-		const batchError = new Error("Connection is closed.");
-		let scans = 0;
-		const client = createFakeClient(
-			async () => {
-				scans += 1;
-				if (scans === 1) {
-					return { cursor: 1, keys: ["ns::a"] };
-				}
+	test.each([false, true])(
+		"waits for a pending delete after SCAN fails with throwOnErrors=%s",
+		async (throwOnErrors) => {
+			const scanError = new Error("SCAN failed");
+			const batchError = new Error("UNLINK failed");
+			let finishDelete!: () => void;
+			const deleteGate = new Promise<void>((resolve) => {
+				finishDelete = resolve;
+			});
+			let markScanFailed!: () => void;
+			const scanFailed = new Promise<void>((resolve) => {
+				markScanFailed = resolve;
+			});
+			let scans = 0;
+			const client = createFakeClient(
+				async () => {
+					scans += 1;
+					if (scans === 1) {
+						return { cursor: 1, keys: ["ns::a"] };
+					}
 
-				throw scanError;
-			},
-			async () => {
-				await new Promise((resolve) => setImmediate(resolve));
-				throw batchError;
-			},
-		);
-		const { adapter, errors } = await createAdapter(client);
+					markScanFailed();
+					throw scanError;
+				},
+				async () => {
+					await deleteGate;
+					throw batchError;
+				},
+			);
+			const { adapter, errors } = await createAdapter(client, throwOnErrors);
+			let clearSettled = false;
+			const result = adapter.clear().then(
+				() => {
+					clearSettled = true;
+				},
+				(error: unknown) => {
+					clearSettled = true;
+					return error;
+				},
+			);
 
-		await expect(adapter.clear()).resolves.toBeUndefined();
+			try {
+				await scanFailed;
+				await new Promise<void>((resolve) => setImmediate(resolve));
+				expect(clearSettled).toBe(false);
+				expect(errors).toEqual([]);
+			} finally {
+				finishDelete();
+			}
 
-		expect(errors).toEqual([scanError]);
-	});
+			expect(await result).toBe(throwOnErrors ? scanError : undefined);
+			expect(errors).toEqual(throwOnErrors ? [] : [scanError]);
+		},
+	);
 
 	test("rejects with the batch error when throwOnErrors is true", async () => {
 		const batchError = new Error("NOPERM this user has no permissions to run the 'unlink' command");

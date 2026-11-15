@@ -44,6 +44,7 @@ Keyv v6 is the current stable release, starting with 6.1.0. This guide covers th
   - [`@keyv/dynamo` Keys Without a TTL No Longer Expire](#keyvdynamo-keys-without-a-ttl-no-longer-expire)
   - [`@keyv/bigmap` Keeps Entries When `storeSize` or `storeHashFunction` Changes](#keyvbigmap-keeps-entries-when-storesize-or-storehashfunction-changes)
   - [`@keyv/redis` `keyPrefixSeparator` Is Now `namespaceSeparator`](#keyvredis-keyprefixseparator-is-now-namespaceseparator)
+  - [`@keyv/redis` `clear()` Handles Delete Failures](#keyvredis-clear-handles-delete-failures)
   - [`@keyv/redis` Matches the Namespace Literally](#keyvredis-matches-the-namespace-literally)
   - [`@keyv/redis` `connectionTimeout` Turns Off Auto-Reconnect](#keyvredis-connectiontimeout-turns-off-auto-reconnect)
 - [New Features](#new-features)
@@ -817,6 +818,19 @@ const store = new KeyvRedis('redis://localhost:6379', { namespaceSeparator: ':' 
 **What this means for you:**
 - Rename `keyPrefixSeparator` to `namespaceSeparator` in your options and code
 - In plain JavaScript an old `keyPrefixSeparator` option is ignored and the store uses `::`. If you set another separator, keys written before the upgrade read as missing until you rename the option. TypeScript reports the old option as an error
+
+---
+
+### `@keyv/redis` `clear()` Handles Delete Failures
+
+In v5, a delete failure during `clear()` could cause an unhandled promise rejection and stop the Node.js process.
+
+In v6, `clear()` handles each delete rejection at once. It waits for delete batches that it already sent, even if `SCAN` fails. The adapter then emits `error` or rejects as the error options specify. If `SCAN` fails, the adapter reports that error.
+
+**What this means for you:**
+
+- Attach an `error` listener when `throwOnErrors` is `false`
+- Do not assume that all keys are removed after an error
 
 ---
 

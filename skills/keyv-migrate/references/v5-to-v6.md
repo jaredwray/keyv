@@ -188,3 +188,12 @@ type KeyvEncryptionAdapter = {
 ```
 
 The order is serialize, then compress, then encrypt on write, and the reverse on read. Custom storage adapters are covered in [custom-adapters.md](custom-adapters.md).
+
+## Redis `clear()` errors
+
+In v5, a delete failure during `clear()` could cause an unhandled promise rejection and stop the Node.js process.
+
+In v6, `clear()` handles each delete rejection at once. It waits for delete batches that it already sent, even if `SCAN` fails. The adapter then emits `error` or rejects as the error options specify. If `SCAN` fails, the adapter reports that error.
+
+- Attach an `error` listener when `throwOnErrors` is `false`
+- Do not assume that all keys are removed after an error
