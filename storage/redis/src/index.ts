@@ -1,3 +1,4 @@
+import process from "node:process";
 import {
 	createClient,
 	createCluster,
@@ -34,6 +35,8 @@ import {
 	type RedisConnectionSentinelType,
 	RedisErrorMessages,
 } from "./types.js";
+
+let hasWarnedKeyPrefixSeparator = false;
 
 export {
 	defaultReconnectStrategy,
@@ -1376,6 +1379,15 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 
 		if (options.namespaceSeparator !== undefined) {
 			this._namespaceSeparator = options.namespaceSeparator;
+		}
+
+		// v5 used keyPrefixSeparator. Plain JavaScript can still pass it, and then keys change without notice.
+		if ("keyPrefixSeparator" in options && !hasWarnedKeyPrefixSeparator) {
+			hasWarnedKeyPrefixSeparator = true;
+			process.emitWarning(
+				`@keyv/redis: keyPrefixSeparator is now namespaceSeparator. The adapter ignores keyPrefixSeparator and uses "${this._namespaceSeparator}".`,
+				{ code: "KEYV_REDIS_KEY_PREFIX_SEPARATOR" },
+			);
 		}
 
 		if (options.clearBatchSize !== undefined && options.clearBatchSize > 0) {

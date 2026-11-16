@@ -1,4 +1,5 @@
 import process from "node:process";
+import { setImmediate } from "node:timers/promises";
 import { faker } from "@faker-js/faker";
 import { createClient, type RedisClientType } from "@redis/client";
 import { beforeEach, describe, expect, test } from "vitest";
@@ -129,6 +130,46 @@ describe("KeyvRedis", () => {
 		expect(keyvRedis.namespaceSeparator).toBe("->");
 		keyvRedis.namespaceSeparator = "";
 		expect(keyvRedis.namespaceSeparator).toBe("");
+	});
+
+	test("should emit one process warning for the removed keyPrefixSeparator option", async () => {
+		const warnings: Error[] = [];
+		const onWarning = (warning: Error) => {
+			if ("code" in warning && warning.code === "KEYV_REDIS_KEY_PREFIX_SEPARATOR") {
+				warnings.push(warning);
+			}
+		};
+		process.on("warning", onWarning);
+
+		try {
+			new KeyvRedis("redis://localhost:6379", {
+				namespace: "test",
+				namespaceSeparator: ":",
+			});
+			await setImmediate();
+			expect(warnings).toEqual([]);
+
+			const options = { namespace: "test", keyPrefixSeparator: ":" };
+			const keyvRedis = new KeyvRedis("redis://localhost:6379", options);
+			expect(keyvRedis.namespaceSeparator).toBe("::");
+
+			const keyv = createKeyv("redis://localhost:6379", {
+				...options,
+				namespaceSeparator: "->",
+			});
+			expect((keyv.store as KeyvRedis<string>).namespaceSeparator).toBe("->");
+			await setImmediate();
+			expect(warnings).toEqual([
+				expect.objectContaining({
+					name: "Warning",
+					code: "KEYV_REDIS_KEY_PREFIX_SEPARATOR",
+					message:
+						'@keyv/redis: keyPrefixSeparator is now namespaceSeparator. The adapter ignores keyPrefixSeparator and uses "::".',
+				}),
+			]);
+		} finally {
+			process.off("warning", onWarning);
+		}
 	});
 
 	test("should not set clearBatchSize when the value is 0 or less", () => {
