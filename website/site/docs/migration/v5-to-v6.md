@@ -817,7 +817,7 @@ const store = new KeyvRedis('redis://localhost:6379', { namespaceSeparator: ':' 
 **What this means for you:**
 - Rename `keyPrefixSeparator` to `namespaceSeparator` in your options and code
 - In plain JavaScript an old `keyPrefixSeparator` option is ignored and the store uses `::`. If you set another separator, keys written before the upgrade read as missing until you rename the option. TypeScript reports the old option as an error
-- The adapter logs a warning when it gets a `keyPrefixSeparator` option, but it still ignores the option
+- The adapter emits the Node.js warning `KEYV_REDIS_KEY_PREFIX_SEPARATOR` once per process when it gets a `keyPrefixSeparator` option. It still ignores the option.
 
 ---
 
