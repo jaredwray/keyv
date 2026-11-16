@@ -963,7 +963,8 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 					let cursor = "0";
 					const batchSize = this._clearBatchSize;
 					const match = this.getKeyPattern();
-					const deletePromises = [];
+					const deletePromises: Promise<void>[] = [];
+					const deleteErrors: unknown[] = [];
 
 					do {
 						const result = await client.scan(cursor, {
@@ -978,10 +979,21 @@ export default class KeyvRedis<T> extends Hookified implements KeyvStorageAdapte
 							continue;
 						}
 
-						deletePromises.push(this.clearWithClusterSupport(this.filterScannedKeys(result.keys)));
+						// Handle the rejection as soon as the batch starts. Waiting with
+						// Promise.all() after the SCAN loop is too late: a delete that fails while
+						// the next SCAN is in flight would be reported as an unhandled rejection.
+						deletePromises.push(
+							this.clearWithClusterSupport(this.filterScannedKeys(result.keys)).catch((error) => {
+								deleteErrors.push(error);
+							}),
+						);
 					} while (cursor !== "0");
 
 					await Promise.all(deletePromises);
+
+					if (deleteErrors.length > 0) {
+						throw deleteErrors[0];
+					}
 				}),
 			);
 		} catch (error) {
