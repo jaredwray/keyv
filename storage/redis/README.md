@@ -1352,7 +1352,14 @@ pnpm --filter @keyv/redis benchmark:readme   # update the table below
 The servers are read from `REDIS_URI`, `VALKEY_URI` and `KIVIDB_URI`. The defaults are `redis://localhost:6379`, `redis://localhost:6370` and `redis://localhost:6381`.
 
 <!-- BENCHMARK-RESULTS-START -->
+| name               |  summary  |   ops/sec |   time/op |  margin  |   samples |
+|--------------------|:---------:|----------:|----------:|:--------:|----------:|
+| kividb set / get   |    🥇     |       13K |      80µs |  ±1.11%  |       13K |
+| valkey set / get   |   -1.9%   |       13K |      82µs |  ±1.18%  |       12K |
+| redis set / get    |  -26.7%   |        9K |     109µs |  ±0.82%  |       10K |
 <!-- BENCHMARK-RESULTS-END -->
+
+These numbers are from a CodeBuild host (8 vCPU, amd64) with the servers and the benchmark on the same machine, using Redis 8.10.2, Valkey 9.1.3 and KiviDB 1.2.2. Each iteration is one `set` followed by one `get` on a single connection, so the result mostly reflects round-trip latency.
 
 # License
 
