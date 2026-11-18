@@ -25,7 +25,9 @@
 		"lint:ci": "biome check --error-on-warnings",
 		"test": "pnpm lint && vitest run --coverage",
 		"test:ci": "pnpm lint:ci && vitest --run --sequence.setupFiles=list --coverage",
-		"clean": "rimraf ./node_modules ./coverage ./dist"
+		"clean": "rimraf ./node_modules ./coverage ./dist",
+		"benchmark": "tsx benchmark/combined.ts",
+		"benchmark:readme": "tsx benchmark/readme.ts"
 	},
 	"repository": {
 		"type": "git",
@@ -58,7 +60,9 @@
 	},
 	"devDependencies": {
 		"@keyv/test-suite": "workspace:^",
-		"timekeeper": "^2.3.1"
+		"@monstermann/tinybench-pretty-printer": "^0.3.0",
+		"timekeeper": "^2.3.1",
+		"tinybench": "^6.2.2"
 	},
 	"tsd": {
 		"directory": "test"

@@ -50,6 +50,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 * [Migrating from v3 to v4](#migrating-from-v3-to-v4)
 * [About Redis Sets and its Support in v4](#about-redis-sets-and-its-support-in-v4)
 * [Using with NestJS](#using-with-nestjs)
+* [Benchmarks](#benchmarks)
 * [License](#license)
 
 # Installation
@@ -1335,6 +1336,23 @@ You can learn more about caching in NestJS in the [official documentation](https
 
 ---
 
+
+# Benchmarks
+
+Simple `set` / `get` benchmarks of `@keyv/redis` against Redis, Valkey and KiviDB, using 10,000 pre-generated key-value pairs. The three servers are started from `scripts/docker-compose.yaml` with the same settings: 4 I/O threads and no persistence (`--save ""`; KiviDB has no `--save` flag, see the compose file). Results will vary across machines and runs. They are meant as a relative comparison, not absolute performance numbers.
+
+To run it, start the servers and then run the benchmark:
+
+```bash
+docker compose -f scripts/docker-compose.yaml up -d keyv_redis keyv_valkey keyv_kividb
+pnpm --filter @keyv/redis benchmark          # print the table
+pnpm --filter @keyv/redis benchmark:readme   # update the table below
+```
+
+The servers are read from `REDIS_URI`, `VALKEY_URI` and `KIVIDB_URI`. The defaults are `redis://localhost:6379`, `redis://localhost:6370` and `redis://localhost:6381`.
+
+<!-- BENCHMARK-RESULTS-START -->
+<!-- BENCHMARK-RESULTS-END -->
 
 # License
 
