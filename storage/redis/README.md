@@ -1339,27 +1339,57 @@ You can learn more about caching in NestJS in the [official documentation](https
 
 # Benchmarks
 
-Simple `set` / `get` benchmarks of `@keyv/redis` against Redis, Valkey and KiviDB, using 10,000 pre-generated key-value pairs. The three servers are started from `scripts/docker-compose.yaml` with the same settings: 4 I/O threads and no persistence (`--save ""`; KiviDB has no `--save` flag, see the compose file). Results will vary across machines and runs. They are meant as a relative comparison, not absolute performance numbers.
+The benchmark runs the cache workload from [issue 2313](https://github.com/jaredwray/keyv/issues/2313) through the Redis adapter.
+Each server starts with 200,000 keys and 1 KiB values.
+Four client threads use 48 connections for the first run and 500 for the second.
+Each run lasts 15 seconds, plus the time to finish outstanding requests.
 
-To run it, start the servers and then run the benchmark:
+Each connection sends one write with a ten-minute expiry for every nine reads.
+One read verifies the value from the last write. The other eight reads check random keys from the connection's key range.
+The table reports verified commands per second across all connections.
+A failed command or an incorrect value stops the benchmark before it updates the README.
+
+Build the adapter from the repository root.
 
 ```bash
-docker compose -f scripts/docker-compose.yaml up -d keyv_redis keyv_valkey keyv_kividb
-pnpm --filter @keyv/redis benchmark          # print the table
-pnpm --filter @keyv/redis benchmark:readme   # update the table below
+pnpm build:keyv
+pnpm --filter @keyv/redis build
 ```
 
-The servers are read from `REDIS_URI`, `VALKEY_URI` and `KIVIDB_URI`. The defaults are `redis://localhost:6379`, `redis://localhost:6370` and `redis://localhost:6381`.
+Start the benchmark servers. The Compose file binds each port to the loopback interface.
+
+```bash
+docker compose -f scripts/docker-compose-redis-benchmark.yaml up -d
+pnpm --filter @keyv/redis benchmark
+```
+
+For the CPU allocation in issue 2313, use a Linux host with eight available CPUs.
+Set `BENCH_SERVER_CPUS=0-3` for the Compose command. Run the client with `taskset -c 4-7 pnpm --filter @keyv/redis benchmark`.
+
+Use `benchmark:readme` in place of `benchmark` to update the table after all six runs succeed.
+Use `REDIS_URI`, `VALKEY_URI`, or `KIVIDB_URI` to select a different server.
+The default host is `127.0.0.1`. The default ports are 16379 for Redis, 16370 for Valkey, and 16381 for KiviDB.
+
+Stop the benchmark servers after the run.
+
+```bash
+docker compose -f scripts/docker-compose-redis-benchmark.yaml down
+```
 
 <!-- BENCHMARK-RESULTS-START -->
-| name               |  summary  |   ops/sec |   time/op |  margin  |   samples |
-|--------------------|:---------:|----------:|----------:|:--------:|----------:|
-| kividb set / get   |    🥇     |       13K |      80µs |  ±1.11%  |       13K |
-| valkey set / get   |   -1.9%   |       13K |      82µs |  ±1.18%  |       12K |
-| redis set / get    |  -26.7%   |        9K |     109µs |  ±0.82%  |       10K |
-<!-- BENCHMARK-RESULTS-END -->
+The client used Node.js 24.21.0 on linux/x64. Its CPU allocation was 2.
+The servers and client shared those two CPUs.
+The run used the executables from the pinned Redis 8.10.2, Valkey 9.1.3, and KiviDB 1.2.2 images.
 
-These numbers are from a CodeBuild host (8 vCPU, amd64) with the servers and the benchmark on the same machine, using Redis 8.10.2, Valkey 9.1.3 and KiviDB 1.2.2. Each iteration is one `set` followed by one `get` on a single connection, so the result mostly reflects round-trip latency.
+| Server | Connections | Verified reads | Verified writes | Operations/s |
+| --- | ---: | ---: | ---: | ---: |
+| Redis | 48 | 250578 | 27842 | 18536 |
+| Redis | 500 | 268380 | 29820 | 19660 |
+| Valkey | 48 | 126027 | 14003 | 9312 |
+| Valkey | 500 | 206874 | 22986 | 15161 |
+| KiviDB | 48 | 246591 | 27399 | 18167 |
+| KiviDB | 500 | 270558 | 30062 | 19764 |
+<!-- BENCHMARK-RESULTS-END -->
 
 # License
 

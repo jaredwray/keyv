@@ -58,23 +58,17 @@ services:
       MYSQL_ROOT_HOST: '%'
   keyv_valkey:
     image: valkey/valkey:9.1.3-trixie@sha256:3add1a336a920ea54770a001ab6feb3da5fceea96a40373a3a2cd469b815f0b7
-    command: redis-server --port 6370 --io-threads 4 --save ""
+    command: redis-server --port 6370
     environment:
       REDIS_HOST: redis
     ports:
       - 6370:6370
   keyv_redis:
     image: redis:8.10.2-trixie@sha256:97ec88159e6d7cfb5ddef9015386087d58a912de80112f06ebdfa78fa5989901
-    command: redis-server --io-threads 4 --save ""
     environment:
       REDIS_HOST: redis
     ports:
       - 6379:6379
-  keyv_kividb:
-    image: kividb/kividb:v1.2.2
-    command: --port 6379 --protected-mode no --threads 4
-    ports:
-      - 6381:6379
   keyv_redis_1:
     image: redis:8.10.2-trixie@sha256:97ec88159e6d7cfb5ddef9015386087d58a912de80112f06ebdfa78fa5989901
     command: redis-server --port 0 --tls-port 6380 --tls-cert-file /tls/redis.crt --tls-key-file /tls/redis.key --tls-ca-cert-file /tls/ca.crt --tls-auth-clients no

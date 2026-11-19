@@ -724,15 +724,9 @@ importers:
       '@keyv/test-suite':
         specifier: workspace:^
         version: link:../../core/test-suite
-      '@monstermann/tinybench-pretty-printer':
-        specifier: ^0.3.0
-        version: 0.3.0(tinybench@6.2.2)
       timekeeper:
         specifier: ^2.3.1
         version: 2.3.1
-      tinybench:
-        specifier: ^6.2.2
-        version: 6.2.2
 
   storage/sqlite:
     dependencies:

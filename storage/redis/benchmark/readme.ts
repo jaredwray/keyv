@@ -1,35 +1,22 @@
 import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { formatCombinedMarkdown, runBenchmarks } from "./utils.js";
+import { availableParallelism } from "node:os";
+import { runBenchmarks } from "./utils.js";
 
-const readmePath = resolve(import.meta.dirname, "..", "README.md");
+const readmePath = new URL("../README.md", import.meta.url);
 const startMarker = "<!-- BENCHMARK-RESULTS-START -->";
 const endMarker = "<!-- BENCHMARK-RESULTS-END -->";
 
-const allResults = await runBenchmarks();
-
-if (allResults.length === 0) {
-	console.error("No benchmark results collected.");
-	process.exit(1);
+const table = await runBenchmarks();
+const readme = readFileSync(readmePath, "utf8");
+const start = readme.indexOf(startMarker);
+const end = readme.indexOf(endMarker, start + startMarker.length);
+if (start === -1 || end === -1) {
+	throw new Error("The README does not contain the benchmark markers.");
 }
 
-const table = formatCombinedMarkdown(allResults);
-const readme = readFileSync(readmePath, "utf-8");
-
-const startIndex = readme.indexOf(startMarker);
-const endIndex = readme.indexOf(endMarker);
-
-if (startIndex === -1 || endIndex === -1) {
-	console.error("Could not find benchmark markers in README.md");
-	process.exit(1);
-}
-
-const updated = readme.slice(0, startIndex + startMarker.length) + "\n" + table + "\n" + readme.slice(endIndex);
-writeFileSync(readmePath, updated);
-
-console.log("");
-console.log("README.md updated with benchmark results:");
-console.log("");
+const client = `The client used Node.js ${process.versions.node} on ${process.platform}/${process.arch}. Its CPU allocation was ${availableParallelism()}.`;
+writeFileSync(
+	readmePath,
+	[readme.slice(0, start + startMarker.length), client, "", table, readme.slice(end)].join("\n"),
+);
 console.log(table);
-console.log("");
-process.exit(0);

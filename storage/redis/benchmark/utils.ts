@@ -1,187 +1,92 @@
-import { faker } from "@faker-js/faker";
-import { tinybenchPrinter } from "@monstermann/tinybench-pretty-printer";
-import { Bench } from "tinybench";
-import KeyvRedis from "../src/index.js";
+import { randomUUID } from "node:crypto";
+import { Worker } from "node:worker_threads";
+import { openStore, preload, threadCount } from "./workload.js";
 
-export interface TaskData {
-	name: string;
-	opsPerSecond: number;
-	meanTime: number;
-	margin: number;
-	samples: number;
-}
-
-export interface BenchmarkResult {
-	benchName: string;
-	tasks: TaskData[];
-}
-
-export interface Server {
-	name: string;
-	uri: string;
-}
-
-// Defaults match scripts/docker-compose.yaml. Override with REDIS_URI, VALKEY_URI and KIVIDB_URI.
-export const servers: Server[] = [
-	{ name: "redis", uri: process.env.REDIS_URI ?? "redis://localhost:6379" },
-	{ name: "valkey", uri: process.env.VALKEY_URI ?? "redis://localhost:6370" },
-	{ name: "kividb", uri: process.env.KIVIDB_URI ?? "redis://localhost:6381" },
+const servers = [
+	{ name: "Redis", uri: process.env.REDIS_URI ?? "redis://127.0.0.1:16379" },
+	{ name: "Valkey", uri: process.env.VALKEY_URI ?? "redis://127.0.0.1:16370" },
+	{ name: "KiviDB", uri: process.env.KIVIDB_URI ?? "redis://127.0.0.1:16381" },
 ];
 
-const iterations = 10_000;
+type Sample = { writes: number; end: number };
 
-export async function runServer(server: Server): Promise<BenchmarkResult> {
-	const store = new KeyvRedis(server.uri, { namespace: "keyv-bench" });
-	store.on("error", () => {});
-	const bench = new Bench({ name: server.name, iterations });
+async function measurePoint(uri: string, namespace: string, connections: number) {
+	const workers: Worker[] = [];
+	let ready = 0;
+	let start = 0;
+	const pending: Promise<Sample>[] = [];
+	try {
+		for (let thread = 0; thread < threadCount; thread++) {
+			const sample = new Promise<Sample>((resolve, reject) => {
+				const worker = new Worker(new URL("./workload.ts", import.meta.url), {
+					workerData: { uri, namespace, connections, thread },
+				});
+				workers.push(worker);
+				worker.once("error", reject);
+				worker.once("exit", () => reject(new Error("A worker stopped before it sent a result.")));
+				worker.on("message", (message: "ready" | Sample) => {
+					if (message !== "ready") {
+						resolve(message);
+						return;
+					}
 
-	// Pre-generate test data so faker overhead doesn't affect benchmark timing
-	const testData = Array.from({ length: iterations }, () => ({
-		key: faker.string.uuid(),
-		value: faker.lorem.paragraph(),
-	}));
-
-	// Warm up connection
-	await store.set("warmup", "warmup");
-	await store.get("warmup");
-	await store.delete("warmup");
-
-	let index = 0;
-	bench.add(`${server.name} set / get`, async () => {
-		const { key, value } = testData[index % testData.length];
-		index++;
-		await store.set(key, value);
-		await store.get(key);
-	});
-
-	await bench.run();
-
-	const tasks: TaskData[] = [];
-	for (const task of bench.tasks) {
-		const result = task.result;
-		if (result.state !== "completed") {
-			continue;
+					ready++;
+					if (ready === threadCount) {
+						start = performance.now();
+						for (const peer of workers) {
+							peer.postMessage(start + 15_000);
+						}
+					}
+				});
+			});
+			pending.push(sample);
 		}
-
-		tasks.push({
-			name: task.name,
-			opsPerSecond: result.throughput.mean,
-			meanTime: result.latency.mean,
-			margin: result.latency.rme,
-			samples: result.latency.samplesCount,
-		});
+		const samples = await Promise.all(pending);
+		const writes = samples.reduce((total, sample) => total + sample.writes, 0);
+		const seconds = (Math.max(...samples.map((sample) => sample.end)) - start) / 1000;
+		return { reads: 9 * writes, writes, ops: Math.round((10 * writes) / seconds) };
+	} finally {
+		await Promise.all(workers.map((worker) => worker.terminate()));
 	}
-
-	console.log(tinybenchPrinter.toMarkdown(bench));
-	console.log("");
-
-	await store.clear();
-	await store.disconnect();
-
-	return { benchName: server.name, tasks };
 }
 
-export async function runBenchmarks(): Promise<BenchmarkResult[]> {
-	const allResults: BenchmarkResult[] = [];
-
-	// Run the servers one at a time so they do not compete for CPU.
-	for (const server of servers) {
-		console.log(`Running ${server.name} benchmark (${server.uri})...`);
+async function runPoint(name: string, uri: string, connections: number) {
+	const namespace = `keyv-bench-${randomUUID()}`;
+	let stage = "connection";
+	try {
+		const store = openStore(uri, namespace);
 		try {
-			allResults.push(await runServer(server));
-		} catch (error) {
-			console.warn(`Skipping ${server.name} benchmark:`, (error as Error).message);
+			await store.getClient();
+			try {
+				stage = "preload";
+				await preload(store);
+				stage = "workload or reply verification";
+				const sample = await measurePoint(uri, namespace, connections);
+				stage = "cleanup";
+				return sample;
+			} finally {
+				await store.clear();
+			}
+		} finally {
+			await store.disconnect(true);
+		}
+	} catch {
+		// Client errors can contain credentials or server-supplied text.
+		throw new Error(`${name} failed at ${connections} connections during ${stage}.`);
+	}
+}
+
+export async function runBenchmarks(): Promise<string> {
+	const rows = [
+		"| Server | Connections | Verified reads | Verified writes | Operations/s |",
+		"| --- | ---: | ---: | ---: | ---: |",
+	];
+	for (const { name, uri } of servers) {
+		for (const connections of [48, 500]) {
+			console.log(`${name}, ${connections} connections`);
+			const { reads, writes, ops } = await runPoint(name, uri, connections);
+			rows.push(`| ${name} | ${connections} | ${reads} | ${writes} | ${ops} |`);
 		}
 	}
-
-	return allResults;
-}
-
-function compactNumber(n: number): string {
-	if (n >= 1_000_000) {
-		return `${(n / 1_000_000).toFixed(1)}M`;
-	}
-
-	if (n >= 1_000) {
-		return `${(n / 1_000).toFixed(0)}K`;
-	}
-
-	return `${Math.round(n)}`;
-}
-
-function compactTime(ms: number): string {
-	if (ms < 0.001) {
-		return `${Math.round(ms * 1_000_000)}ns`;
-	}
-
-	if (ms < 1) {
-		return `${Math.round(ms * 1_000)}µs`;
-	}
-
-	return `${Math.round(ms)}ms`;
-}
-
-function pad(str: string, width: number, align: "left" | "center" | "right" = "left"): string {
-	if (str.length >= width) {
-		return str;
-	}
-
-	const diff = width - str.length;
-	if (align === "right") {
-		return " ".repeat(diff) + str;
-	}
-
-	if (align === "center") {
-		const left = Math.floor(diff / 2);
-		return " ".repeat(left) + str + " ".repeat(diff - left);
-	}
-
-	return str + " ".repeat(diff);
-}
-
-export function formatCombinedMarkdown(results: BenchmarkResult[]): string {
-	const allTasks: TaskData[] = results.flatMap((r) => r.tasks);
-
-	if (allTasks.length === 0) {
-		return "No benchmark results to display.";
-	}
-
-	allTasks.sort((a, b) => b.opsPerSecond - a.opsPerSecond);
-
-	const fastest = allTasks[0];
-
-	const data = allTasks.map((task) => {
-		const summary = task === fastest
-			? "🥇"
-			: `${(((task.opsPerSecond - fastest.opsPerSecond) / fastest.opsPerSecond) * 100).toFixed(1)}%`;
-
-		return {
-			name: task.name,
-			summary,
-			ops: compactNumber(task.opsPerSecond),
-			time: compactTime(task.meanTime),
-			margin: `±${task.margin.toFixed(2)}%`,
-			samples: compactNumber(task.samples),
-		};
-	});
-
-	const headers = { name: "name", summary: "summary", ops: "ops/sec", time: "time/op", margin: "margin", samples: "samples" };
-
-	const cols = {
-		name: Math.max(headers.name.length, ...data.map((d) => d.name.length)) + 2,
-		summary: Math.max(headers.summary.length, ...data.map((d) => d.summary.length)) + 2,
-		ops: Math.max(headers.ops.length, ...data.map((d) => d.ops.length)) + 2,
-		time: Math.max(headers.time.length, ...data.map((d) => d.time.length)) + 2,
-		margin: Math.max(headers.margin.length, ...data.map((d) => d.margin.length)) + 2,
-		samples: Math.max(headers.samples.length, ...data.map((d) => d.samples.length)) + 2,
-	};
-
-	const headerRow = `| ${pad(headers.name, cols.name)} | ${pad(headers.summary, cols.summary, "center")} | ${pad(headers.ops, cols.ops, "right")} | ${pad(headers.time, cols.time, "right")} | ${pad(headers.margin, cols.margin, "center")} | ${pad(headers.samples, cols.samples, "right")} |`;
-	const separator = `|${"-".repeat(cols.name + 2)}|:${"-".repeat(cols.summary)}:|${"-".repeat(cols.ops + 1)}:|${"-".repeat(cols.time + 1)}:|:${"-".repeat(cols.margin)}:|${"-".repeat(cols.samples + 1)}:|`;
-
-	const rows = data.map((d) =>
-		`| ${pad(d.name, cols.name)} | ${pad(d.summary, cols.summary, "center")} | ${pad(d.ops, cols.ops, "right")} | ${pad(d.time, cols.time, "right")} | ${pad(d.margin, cols.margin, "center")} | ${pad(d.samples, cols.samples, "right")} |`,
-	);
-
-	return [headerRow, separator, ...rows].join("\n");
+	return rows.join("\n");
 }
