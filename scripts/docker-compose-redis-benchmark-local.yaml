@@ -1,0 +1,15 @@
+networks:
+  default:
+    internal: false
+    driver_opts:
+      com.docker.network.bridge.gateway_mode_ipv4: nat
+services:
+  redis:
+    ports:
+      - "127.0.0.1:16379:6379"
+  valkey:
+    ports:
+      - "127.0.0.1:16370:6379"
+  kividb:
+    ports:
+      - "127.0.0.1:16381:6379"
