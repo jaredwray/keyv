@@ -23,11 +23,18 @@ async function measurePoint(uri: string, namespace: string, connections: number)
 					workerData: { uri, namespace, connections, thread },
 				});
 				workers.push(worker);
+				let result: Sample | undefined;
 				worker.once("error", reject);
-				worker.once("exit", () => reject(new Error("A worker stopped before it sent a result.")));
+				worker.once("exit", (code) => {
+					if (code === 0 && result) {
+						resolve(result);
+					} else {
+						reject(new Error("A worker failed to return a result."));
+					}
+				});
 				worker.on("message", (message: "ready" | Sample) => {
 					if (message !== "ready") {
-						resolve(message);
+						result = message;
 						return;
 					}
 
@@ -46,8 +53,9 @@ async function measurePoint(uri: string, namespace: string, connections: number)
 		const writes = samples.reduce((total, sample) => total + sample.writes, 0);
 		const seconds = (Math.max(...samples.map((sample) => sample.end)) - start) / 1000;
 		return { reads: 9 * writes, writes, ops: Math.round((10 * writes) / seconds) };
-	} finally {
+	} catch (error) {
 		await Promise.all(workers.map((worker) => worker.terminate()));
+		throw error;
 	}
 }
 
