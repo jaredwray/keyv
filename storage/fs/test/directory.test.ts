@@ -307,6 +307,19 @@ describe("directory strategy races and failures", () => {
 		await store.disconnect();
 	});
 
+	test("a read sees every key of a large batch made before it", async () => {
+		const { store } = newStore();
+		const keys = Array.from({ length: 40 }, (_, index) => `key-${index}`);
+		await store.setMany(keys.map((key) => ({ key, value: "old" })));
+		const last = keys.at(-1) as string;
+		const changes: Promise<unknown>[] = [store.setMany(keys.map((key) => ({ key, value: "new" })))];
+		expect(await store.get(last)).toBe("new");
+		changes.push(store.deleteMany(keys));
+		expect(await store.has(last)).toBe(false);
+		await Promise.all(changes);
+		await store.disconnect();
+	});
+
 	test("through Keyv, a read in a later task sees a write that is not awaited", async () => {
 		const { store } = newStore();
 		const keyv = new Keyv({ store });

@@ -22,6 +22,7 @@ import {
 	fsOps,
 	hasCode,
 	KeyedMutex,
+	type KeyTurn,
 	mapLimit,
 	PRIVATE_DIRECTORY_MODE,
 	PRIVATE_FILE_MODE,
@@ -170,7 +171,15 @@ export class DirectoryStrategy extends Strategy {
 		}));
 		const release = await this._gate.shared();
 		try {
-			await mapLimit(encoded, CONCURRENCY, ({ key, entry }) => this.write(ns, key, entry));
+			// Take the place of each key before the first write starts. Then a later read of any
+			// key in the batch waits for its write, also when the write waits for a free slot.
+			const turns = this.reserve(
+				ns,
+				encoded.map(({ key }) => key),
+			);
+			await mapLimit(encoded, CONCURRENCY, ({ key, entry }, index) =>
+				this.write(ns, key, entry, turns[index]),
+			);
 		} finally {
 			release();
 		}
@@ -184,7 +193,9 @@ export class DirectoryStrategy extends Strategy {
 	public async deleteMany(ns: Namespace, keys: string[]): Promise<boolean[]> {
 		const release = await this._gate.shared();
 		try {
-			return await mapLimit(keys, CONCURRENCY, (key) => this.remove(ns, key));
+			// Take the place of each key before the first delete starts, as setMany() does.
+			const turns = this.reserve(ns, keys);
+			return await mapLimit(keys, CONCURRENCY, (key, index) => this.remove(ns, key, turns[index]));
 		} finally {
 			release();
 		}
@@ -350,11 +361,21 @@ export class DirectoryStrategy extends Strategy {
 	}
 
 	/**
+	 * Takes a place in line for each key, in call order. It finds all the files first, so an error
+	 * cannot leave a place that no operation uses.
+	 * @returns One place for each key, in the same order.
+	 */
+	private reserve(ns: Namespace, keys: readonly string[]): KeyTurn[] {
+		const files = keys.map((key) => this.locate(ns, key).file);
+		return files.map((file) => this._mutex.reserve(file));
+	}
+
+	/**
 	 * Writes a key's entry: to a temporary file first, then renamed into place.
 	 */
-	private async write(ns: Namespace, key: string, entry: Entry): Promise<void> {
+	private async write(ns: Namespace, key: string, entry: Entry, turn: KeyTurn): Promise<void> {
 		const { shard, file } = this.locate(ns, key);
-		await this._mutex.run(file, async () => {
+		await turn(async () => {
 			if (isExpired(entry.expires, Date.now())) {
 				// Writing an expired entry deletes the key.
 				await unlinkIfExists(file);
@@ -412,9 +433,9 @@ export class DirectoryStrategy extends Strategy {
 	 * comes after the move is kept.
 	 * @returns Whether a live entry was deleted.
 	 */
-	private async remove(ns: Namespace, key: string): Promise<boolean> {
+	private async remove(ns: Namespace, key: string, turn: KeyTurn): Promise<boolean> {
 		const { file } = this.locate(ns, key);
-		return this._mutex.run(file, async () => {
+		return turn(async () => {
 			const parked = path.join(
 				this.temporaryDirectory,
 				`${process.pid}-${Date.now()}-${randomHex(8)}.deleting`,

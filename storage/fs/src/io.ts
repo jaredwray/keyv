@@ -368,6 +368,9 @@ export async function mapLimit<T, R>(
 /**
  * Runs functions one at a time per key, in call order. Different keys run concurrently.
  */
+/** A place in line for one key, from {@link KeyedMutex.reserve}. */
+export type KeyTurn = <T>(fn: () => Promise<T>) => Promise<T>;
+
 export class KeyedMutex {
 	private readonly _tails = new Map<string, Promise<void>>();
 
@@ -377,21 +380,33 @@ export class KeyedMutex {
 	 * @param fn - The function to run.
 	 */
 	public async run<T>(key: string, fn: () => Promise<T>): Promise<T> {
+		return this.reserve(key)(fn);
+	}
+
+	/**
+	 * Takes a place in line for the key now, and runs a function in that place later. Later calls
+	 * for the key wait for it. Thus you must call the returned function one time.
+	 * @param key - The key to serialize on.
+	 * @returns A function that runs `fn` once every earlier call for the key has settled.
+	 */
+	public reserve(key: string): KeyTurn {
 		const previous = this._tails.get(key) ?? Promise.resolve();
 		let release!: () => void;
 		const tail = new Promise<void>((resolve) => {
 			release = resolve;
 		});
 		this._tails.set(key, tail);
-		try {
-			await previous;
-			return await fn();
-		} finally {
-			release();
-			if (this._tails.get(key) === tail) {
-				this._tails.delete(key);
+		return async (fn) => {
+			try {
+				await previous;
+				return await fn();
+			} finally {
+				release();
+				if (this._tails.get(key) === tail) {
+					this._tails.delete(key);
+				}
 			}
-		}
+		};
 	}
 
 	/**
