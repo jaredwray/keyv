@@ -18,7 +18,8 @@ async function measurePoint(uri: string, namespace: string, connections: number)
 	try {
 		for (let thread = 0; thread < threadCount; thread++) {
 			const sample = new Promise<Sample>((resolve, reject) => {
-				const worker = new Worker(new URL("./workload.ts", import.meta.url), {
+				const module = import.meta.url.endsWith(".ts") ? "./workload.ts" : "./workload.mjs";
+				const worker = new Worker(new URL(module, import.meta.url), {
 					workerData: { uri, namespace, connections, thread },
 				});
 				workers.push(worker);

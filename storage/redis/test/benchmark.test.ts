@@ -1,8 +1,48 @@
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@redis/client";
+import { load } from "js-yaml";
 import { expect, test } from "vitest";
+
+test("the default benchmark network is private and its services publish no host ports", () => {
+	const file = new URL("../../../scripts/docker-compose-redis-benchmark.yaml", import.meta.url);
+	const stack = load(readFileSync(file, "utf8")) as {
+		networks?: Record<string, { internal?: boolean; driver_opts?: Record<string, string> }>;
+		services: Record<
+			string,
+			{
+				image?: string;
+				build?: { dockerfile_inline: string };
+				ports?: unknown[];
+				networks?: string[] | Record<string, unknown>;
+				network_mode?: string;
+			}
+		>;
+	};
+	for (const [name, service] of Object.entries(stack.services)) {
+		expect(service.ports ?? [], name).toEqual([]);
+		expect(service.network_mode, name).toBeUndefined();
+		const networks = service.networks ?? ["default"];
+		for (const network of Array.isArray(networks) ? networks : Object.keys(networks)) {
+			expect(stack.networks?.[network], name).toMatchObject({
+				internal: true,
+				driver_opts: { "com.docker.network.bridge.gateway_mode_ipv4": "isolated" },
+			});
+		}
+		const images = service.image
+			? [service.image]
+			: Array.from(
+					service.build?.dockerfile_inline.matchAll(/^\s*FROM\s+(\S+)/gim) ?? [],
+					(match) => match[1],
+				);
+		expect(images.length, name).toBeGreaterThan(0);
+		for (const image of images) {
+			expect(image, name).toMatch(/@sha256:[a-f0-9]{64}$/);
+		}
+	}
+});
 
 test("the benchmark rejects a read-only account and omits its credentials from the report", async () => {
 	const url = new URL(process.env.REDIS_URI ?? "redis://localhost:6379");

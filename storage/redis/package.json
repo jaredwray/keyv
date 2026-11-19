@@ -27,6 +27,7 @@
 		"test:ci": "pnpm lint:ci && vitest --run --sequence.setupFiles=list --coverage",
 		"clean": "rimraf ./node_modules ./coverage ./dist",
 		"benchmark": "tsx benchmark/combined.ts",
+		"benchmark:build": "tsdown --config benchmark/tsdown.config.ts",
 		"benchmark:readme": "tsx benchmark/readme.ts"
 	},
 	"repository": {

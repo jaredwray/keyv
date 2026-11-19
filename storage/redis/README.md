@@ -1349,31 +1349,50 @@ One read verifies the value from the last write. The other eight reads check ran
 The table reports verified commands per second across all connections.
 A failed command or an incorrect value stops the benchmark before it updates the README.
 
-Build the adapter from the repository root.
+Build the adapter and the benchmark client from the repository root.
 
 ```bash
 pnpm build:keyv
 pnpm --filter @keyv/redis build
+pnpm --filter @keyv/redis benchmark:build
 ```
 
-Start the benchmark servers. The Compose file binds each port to the loopback interface.
+Use Docker Engine 28 or later for the isolated bridge.
+On a shared runner, set `COMPOSE_PROJECT_NAME` to a unique name for each job.
+Run the client on the private Compose network. The three servers publish no host ports.
+The client image contains the compiled benchmark files. The client runs as a non-root user with a read-only filesystem.
 
 ```bash
-docker compose -f scripts/docker-compose-redis-benchmark.yaml up -d
-pnpm --filter @keyv/redis benchmark
+docker compose -f scripts/docker-compose-redis-benchmark.yaml run --build --rm client
 ```
 
 For the CPU allocation in issue 2313, use a Linux host with eight available CPUs.
-Set `BENCH_SERVER_CPUS=0-3` for the Compose command. Run the client with `taskset -c 4-7 pnpm --filter @keyv/redis benchmark`.
+Set `BENCH_SERVER_CPUS=0-3` and `BENCH_CLIENT_CPUS=4-7` for the Compose command.
 
-Use `benchmark:readme` in place of `benchmark` to update the table after all six runs succeed.
-Use `REDIS_URI`, `VALKEY_URI`, or `KIVIDB_URI` to select a different server.
-The default host is `127.0.0.1`. The default ports are 16379 for Redis, 16370 for Valkey, and 16381 for KiviDB.
+To update the table after all six runs succeed, give the client write access to this README.
+
+```bash
+docker compose -f scripts/docker-compose-redis-benchmark.yaml run --build --rm \
+  --user "$(id -u):$(id -g)" \
+  -v "$PWD/storage/redis/README.md:/benchmark/README.md" \
+  client node runner/readme.mjs
+```
+
+To run the client directly on a developer machine, add the local Compose file. It selects a standard bridge.
+It publishes the Redis, Valkey, and KiviDB ports on `127.0.0.1` at 16379, 16370, and 16381.
+
+```bash
+docker compose -f scripts/docker-compose-redis-benchmark.yaml \
+  -f scripts/docker-compose-redis-benchmark-local.yaml up -d redis valkey kividb
+pnpm --filter @keyv/redis benchmark
+```
+
+The host client accepts `REDIS_URI`, `VALKEY_URI`, and `KIVIDB_URI` for other benchmark servers.
 
 Stop the benchmark servers after the run.
 
 ```bash
-docker compose -f scripts/docker-compose-redis-benchmark.yaml down
+docker compose -f scripts/docker-compose-redis-benchmark.yaml down --volumes
 ```
 
 <!-- BENCHMARK-RESULTS-START -->
