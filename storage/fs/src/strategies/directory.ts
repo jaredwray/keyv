@@ -119,6 +119,7 @@ export class DirectoryStrategy extends Strategy {
 	}
 
 	public async get(ns: Namespace, key: string, reports: Reports): Promise<unknown> {
+		await this.afterEarlierChanges(this.locate(ns, key).file);
 		const stored = await this.readEntry(ns, key, reports);
 		if (stored === undefined) {
 			return undefined;
@@ -138,6 +139,7 @@ export class DirectoryStrategy extends Strategy {
 
 	public async has(ns: Namespace, key: string, reports: Reports): Promise<boolean> {
 		const { file } = this.locate(ns, key);
+		await this.afterEarlierChanges(file);
 		const header = await this.readHeader(file, ns, key, reports);
 		if (header === undefined) {
 			return false;
@@ -331,6 +333,20 @@ export class DirectoryStrategy extends Strategy {
 		}
 
 		this._lock = undefined;
+	}
+
+	/**
+	 * Waits for the writes, deletes and clear() calls that this process made on a key before a
+	 * read, so the read sees them. A write takes its place in the gate before its first await,
+	 * and its place for the key when the gate lets it in. Thus the read also goes through the
+	 * gate, and then waits for the key. It does not keep the gate, because removing an expired
+	 * entry after the read takes the gate again.
+	 * @param file - The entry file of the key.
+	 */
+	private async afterEarlierChanges(file: string): Promise<void> {
+		const release = await this._gate.shared();
+		release();
+		await this._mutex.idle(file);
 	}
 
 	/**

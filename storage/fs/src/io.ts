@@ -393,6 +393,15 @@ export class KeyedMutex {
 			}
 		}
 	}
+
+	/**
+	 * Waits until every call for the key made before this one has settled. It does not hold the
+	 * key, so a later call does not wait for it.
+	 * @param key - The key to wait for.
+	 */
+	public async idle(key: string): Promise<void> {
+		await this._tails.get(key);
+	}
 }
 
 type GateWaiter = { exclusive: boolean; grant: () => void };
