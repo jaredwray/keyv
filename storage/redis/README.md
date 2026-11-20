@@ -50,6 +50,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 * [Migrating from v3 to v4](#migrating-from-v3-to-v4)
 * [About Redis Sets and its Support in v4](#about-redis-sets-and-its-support-in-v4)
 * [Using with NestJS](#using-with-nestjs)
+* [Benchmarks](#benchmarks)
 * [License](#license)
 
 # Installation
@@ -1335,6 +1336,79 @@ You can learn more about caching in NestJS in the [official documentation](https
 
 ---
 
+
+# Benchmarks
+
+The benchmark runs the cache workload from [issue 2313](https://github.com/jaredwray/keyv/issues/2313) through the Redis adapter.
+Each server starts with 200,000 keys and 1 KiB values.
+Four client threads use 48 connections for the first run and 500 for the second.
+Each run lasts 15 seconds, plus the time to finish outstanding requests.
+
+Each connection sends one write with a ten-minute expiry for every nine reads.
+One read verifies the value from the last write. The other eight reads check random keys from the connection's key range.
+The table reports verified commands per second across all connections.
+A failed command or an incorrect value stops the benchmark before it updates the README.
+
+Build the adapter and the benchmark client from the repository root.
+
+```bash
+pnpm build:keyv
+pnpm --filter @keyv/redis build
+pnpm --filter @keyv/redis benchmark:build
+```
+
+Use Docker Engine 28 or later for the isolated bridge.
+On a shared runner, set `COMPOSE_PROJECT_NAME` to a unique name for each job.
+Run the client on the private Compose network. The three servers publish no host ports.
+The client image contains the compiled benchmark files. The client runs as a non-root user with a read-only filesystem.
+
+```bash
+docker compose -f scripts/docker-compose-redis-benchmark.yaml run --build --rm client
+```
+
+For the CPU allocation in issue 2313, use a Linux host with eight available CPUs.
+Set `BENCH_SERVER_CPUS=0-3` and `BENCH_CLIENT_CPUS=4-7` for the Compose command.
+
+To update the table after all six runs succeed, give the client write access to this README.
+
+```bash
+docker compose -f scripts/docker-compose-redis-benchmark.yaml run --build --rm \
+  --user "$(id -u):$(id -g)" \
+  -v "$PWD/storage/redis/README.md:/benchmark/README.md" \
+  client node runner/readme.mjs
+```
+
+To run the client directly on a developer machine, add the local Compose file. It selects a standard bridge.
+It publishes the Redis, Valkey, and KiviDB ports on `127.0.0.1` at 16379, 16370, and 16381.
+
+```bash
+docker compose -f scripts/docker-compose-redis-benchmark.yaml \
+  -f scripts/docker-compose-redis-benchmark-local.yaml up -d redis valkey kividb
+pnpm --filter @keyv/redis benchmark
+```
+
+The host client accepts `REDIS_URI`, `VALKEY_URI`, and `KIVIDB_URI` for other benchmark servers.
+
+Stop the benchmark servers after the run.
+
+```bash
+docker compose -f scripts/docker-compose-redis-benchmark.yaml down --volumes
+```
+
+<!-- BENCHMARK-RESULTS-START -->
+The client used Node.js 24.21.0 on linux/x64. Its CPU allocation was 2.
+The servers and client shared those two CPUs.
+The run used the executables from the pinned Redis 8.10.2, Valkey 9.1.3, and KiviDB 1.2.2 images.
+
+| Server | Connections | Verified reads | Verified writes | Operations/s |
+| --- | ---: | ---: | ---: | ---: |
+| Redis | 48 | 250578 | 27842 | 18536 |
+| Redis | 500 | 268380 | 29820 | 19660 |
+| Valkey | 48 | 126027 | 14003 | 9312 |
+| Valkey | 500 | 206874 | 22986 | 15161 |
+| KiviDB | 48 | 246591 | 27399 | 18167 |
+| KiviDB | 500 | 270558 | 30062 | 19764 |
+<!-- BENCHMARK-RESULTS-END -->
 
 # License
 
