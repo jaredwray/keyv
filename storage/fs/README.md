@@ -225,7 +225,15 @@ Expired entries are also removed from disk:
 
 ## Multiple Processes
 
-Within one process, every `KeyvFs` on the same path shares one store, so they never overwrite each other. This works across CommonJS and ES module copies of the package too. In one process, a read sees each write, delete and `clear()` called before it, also when the code did not await that call.
+Within one process, every `KeyvFs` on the same path shares one store, so they never overwrite each other. This works across CommonJS and ES module copies of the package too.
+
+For `get()`, `has()`, `getMany()`, and `hasMany()`, the order starts when a call reaches the shared adapter.
+Each method sees the effects of earlier writes and deletes for the same key and earlier `clear()` calls for its namespace.
+A later write to a key takes precedence over an earlier batch for that key.
+
+Keyv can still process hooks or encode a value before the adapter receives a write.
+Use `await keyv.set(...)` before a read that depends on that write.
+Await pending writes before you use `iterator()` to see their effects.
 
 - **`"file"` strategy: one process per file.** Each process holds the whole store in memory and saves all of it, so two processes writing one file overwrite each other's changes. There is no lock; give each process its own file, or use the `"directory"` strategy. Worker threads count as separate processes.
 - **`"directory"` strategy: several processes are fine.** Run them as the same user, since entry files are private to their owner. Each write replaces one file atomically, and the last write to a key wins. Removing an expired entry never deletes a newer write from another process. To check, it moves the entry aside for a moment; in that moment, the other process misses the key (a `get` returns `undefined`, a `delete` returns `false`) until the entry is put back. If a process crashes in that moment, the entry is put back by the next process that opens the store or sweeps it. A `delete` also moves the entry aside before it reads it, so it deletes only the entry that it reports on: a write from another process after that move is kept. A `clear()` in one process and a `set` in another are not ordered.

@@ -312,11 +312,36 @@ describe("directory strategy races and failures", () => {
 		const keys = Array.from({ length: 40 }, (_, index) => `key-${index}`);
 		await store.setMany(keys.map((key) => ({ key, value: "old" })));
 		const last = keys.at(-1) as string;
-		const changes: Promise<unknown>[] = [store.setMany(keys.map((key) => ({ key, value: "new" })))];
+		const entries = keys.map((key) => ({ key, value: "new" }));
+		const first = store.setMany(entries);
 		expect(await store.get(last)).toBe("new");
-		changes.push(store.deleteMany(keys));
+		await first;
+
+		await Promise.all([store.setMany(entries), store.set(last, "last write")]);
+		expect(await store.get(last)).toBe("last write");
+
+		const removed = store.deleteMany(keys);
 		expect(await store.has(last)).toBe(false);
-		await Promise.all(changes);
+		await removed;
+		await store.disconnect();
+	});
+
+	test("deleteMany uses the original keys when the caller reuses the array", async () => {
+		const { store } = newStore();
+		const keys = Array.from({ length: 40 }, (_, index) => `key-${index}`);
+		await store.setMany(keys.map((key) => ({ key, value: key })));
+		const last = keys.at(-1) as string;
+		const expected = keys.map(() => true);
+		const rename = fsOps.rename;
+		vi.spyOn(fsOps, "rename").mockImplementationOnce((from, to) => {
+			keys.length = 0;
+			return rename(from, to);
+		});
+
+		const removed = store.deleteMany(keys);
+		keys.push("extra");
+		expect(await removed).toEqual(expected);
+		expect(await store.has(last)).toBe(false);
 		await store.disconnect();
 	});
 

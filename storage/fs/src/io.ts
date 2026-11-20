@@ -365,57 +365,48 @@ export async function mapLimit<T, R>(
 	return results;
 }
 
-/**
- * Runs functions one at a time per key, in call order. Different keys run concurrently.
- */
-/** A place in line for one key, from {@link KeyedMutex.reserve}. */
-export type KeyTurn = <T>(fn: () => Promise<T>) => Promise<T>;
+/** A reserved turn for one key. */
+type KeyTurn = <T>(fn: () => Promise<T>) => Promise<T>;
 
+/** Runs operations in call order for each key in a namespace. */
 export class KeyedMutex {
-	private readonly _tails = new Map<string, Promise<void>>();
+	private readonly _namespaces = new Map<string | undefined, Map<string, Promise<void>>>();
 
-	/**
-	 * Runs `fn` once every earlier call for the same key has settled.
-	 * @param key - The key to serialize on.
-	 * @param fn - The function to run.
-	 */
-	public async run<T>(key: string, fn: () => Promise<T>): Promise<T> {
-		return this.reserve(key)(fn);
+	/** Runs a function after all earlier operations for the key. */
+	public run<T>(key: string, fn: () => Promise<T>, namespace?: string): Promise<T> {
+		return this.reserve(key, namespace)(fn);
 	}
 
-	/**
-	 * Takes a place in line for the key now, and runs a function in that place later. Later calls
-	 * for the key wait for it. Thus you must call the returned function one time.
-	 * @param key - The key to serialize on.
-	 * @returns A function that runs `fn` once every earlier call for the key has settled.
-	 */
-	public reserve(key: string): KeyTurn {
-		const previous = this._tails.get(key) ?? Promise.resolve();
-		let release!: () => void;
-		const tail = new Promise<void>((resolve) => {
-			release = resolve;
-		});
-		this._tails.set(key, tail);
+	/** Reserves a turn for the key. Call the returned function once to use and release the turn. */
+	public reserve(key: string, namespace?: string): KeyTurn {
+		let tails = this._namespaces.get(namespace);
+		if (!tails) {
+			tails = new Map();
+			this._namespaces.set(namespace, tails);
+		}
+
+		const previous = tails.get(key);
+		const { promise, resolve } = Promise.withResolvers<void>();
+		tails.set(key, promise);
 		return async (fn) => {
 			try {
 				await previous;
 				return await fn();
 			} finally {
-				release();
-				if (this._tails.get(key) === tail) {
-					this._tails.delete(key);
+				resolve();
+				if (tails.get(key) === promise) {
+					tails.delete(key);
+					if (tails.size === 0) {
+						this._namespaces.delete(namespace);
+					}
 				}
 			}
 		};
 	}
 
-	/**
-	 * Waits until every call for the key made before this one has settled. It does not hold the
-	 * key, so a later call does not wait for it.
-	 * @param key - The key to wait for.
-	 */
-	public async idle(key: string): Promise<void> {
-		await this._tails.get(key);
+	/** Waits for the operations that already have a turn for the key. */
+	public async idle(key: string, namespace?: string): Promise<void> {
+		await this._namespaces.get(namespace)?.get(key);
 	}
 }
 
