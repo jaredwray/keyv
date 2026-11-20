@@ -34,6 +34,7 @@
 - [Expiry](#expiry)
 - [Durability](#durability)
 - [Multiple Processes](#multiple-processes)
+  - [Directory stores without hard links](#directory-stores-without-hard-links)
 - [Errors and Damaged Data](#errors-and-damaged-data)
 - [Migrating from keyv-file](#migrating-from-keyv-file)
 - [Benchmarks](#benchmarks)
@@ -236,10 +237,19 @@ Use `await keyv.set(...)` before a read that depends on that write.
 Await pending writes before you use `iterator()` to see their effects.
 
 - **`"file"` strategy: one process per file.** Each process holds the whole store in memory and saves all of it, so two processes writing one file overwrite each other's changes. There is no lock; give each process its own file, or use the `"directory"` strategy. Worker threads count as separate processes.
-- **`"directory"` strategy: several processes are fine.** Run them as the same user, since entry files are private to their owner. Each write replaces one file atomically, and the last write to a key wins. Removing an expired entry never deletes a newer write from another process. To check, it moves the entry aside for a moment; in that moment, the other process misses the key (a `get` returns `undefined`, a `delete` returns `false`) until the entry is put back. If a process crashes in that moment, the entry is put back by the next process that opens the store or sweeps it. A `delete` also moves the entry aside before it reads it, so it deletes only the entry that it reports on: a write from another process after that move is kept. A `clear()` in one process and a `set` in another are not ordered.
-- **File systems without hard links** (such as FAT and exFAT): several processes can use a directory store, but only one of them removes expired entries. That process holds a lock file, `keyv-fs.lock`. The first process to open the store takes the lock, and removes the file when it disconnects. The other processes still hide expired entries from reads, but leave them on disk for the lock holder. If the holder stopped without its `disconnect()`, a process on the same computer takes over the lock at its next load or sweep. A lock file that is empty or damaged is taken over only when it is more than one minute old, because its process can still be writing it. If the lock is from a process on a different computer, delete the file yourself when that process is stopped.
+- **`"directory"` strategy: several processes are fine.** Run them as the same user, since entry files are private to their owner. Each write replaces one file atomically, and the last write to a key wins. On a file system with hard links, expiry cleanup preserves a newer write from another process. To check, it moves the entry aside for a moment; in that moment, the other process misses the key (a `get` returns `undefined`, a `delete` returns `false`) until the entry is put back. If a process crashes in that moment, the entry is put back by the next process that opens the store or sweeps it. A `delete` also moves the entry aside before it reads it, so it deletes only the entry that it reports on: a write from another process after that move is kept. A `clear()` in one process and a `set` in another are not ordered.
 
 Network file systems are not supported.
+
+### Directory stores without hard links
+
+On file systems such as FAT and exFAT, all processes skip expired entries when they read.
+Only the process that holds `keyv-fs.lock` removes expired entries during cleanup.
+The first process to open the store takes the lock and releases it when it disconnects.
+
+If the lock holder stops before it disconnects, another process on the same computer can take over at its next load or sweep.
+For an empty or damaged lock file, the adapter waits until the file is more than one minute old.
+If the lock names another computer, remove `keyv-fs.lock` only after you confirm that the owner process no longer runs there.
 
 ## Errors and Damaged Data
 
