@@ -34,7 +34,7 @@
 - [Expiry](#expiry)
 - [Durability](#durability)
 - [Multiple Processes](#multiple-processes)
-  - [Directory stores without hard links](#directory-stores-without-hard-links)
+- [Directory stores without hard links](#directory-stores-without-hard-links)
 - [Errors and Damaged Data](#errors-and-damaged-data)
 - [Migrating from keyv-file](#migrating-from-keyv-file)
 - [Benchmarks](#benchmarks)
@@ -241,7 +241,7 @@ Await pending writes before you use `iterator()` to see their effects.
 
 Network file systems are not supported.
 
-### Directory stores without hard links
+## Directory stores without hard links
 
 On file systems such as FAT and exFAT, all processes skip expired entries when they read.
 Only the process that holds `keyv-fs.lock` removes expired entries during cleanup.
