@@ -365,33 +365,48 @@ export async function mapLimit<T, R>(
 	return results;
 }
 
-/**
- * Runs functions one at a time per key, in call order. Different keys run concurrently.
- */
-export class KeyedMutex {
-	private readonly _tails = new Map<string, Promise<void>>();
+/** A reserved turn for one key. */
+type KeyTurn = <T>(fn: () => Promise<T>) => Promise<T>;
 
-	/**
-	 * Runs `fn` once every earlier call for the same key has settled.
-	 * @param key - The key to serialize on.
-	 * @param fn - The function to run.
-	 */
-	public async run<T>(key: string, fn: () => Promise<T>): Promise<T> {
-		const previous = this._tails.get(key) ?? Promise.resolve();
-		let release!: () => void;
-		const tail = new Promise<void>((resolve) => {
-			release = resolve;
-		});
-		this._tails.set(key, tail);
-		try {
-			await previous;
-			return await fn();
-		} finally {
-			release();
-			if (this._tails.get(key) === tail) {
-				this._tails.delete(key);
-			}
+/** Runs operations in call order for each key in a namespace. */
+export class KeyedMutex {
+	private readonly _namespaces = new Map<string | undefined, Map<string, Promise<void>>>();
+
+	/** Runs a function after all earlier operations for the key. */
+	public run<T>(key: string, fn: () => Promise<T>, namespace?: string): Promise<T> {
+		return this.reserve(key, namespace)(fn);
+	}
+
+	/** Reserves a turn for the key. Call the returned function once to use and release the turn. */
+	public reserve(key: string, namespace?: string): KeyTurn {
+		let tails = this._namespaces.get(namespace);
+		if (!tails) {
+			tails = new Map();
+			this._namespaces.set(namespace, tails);
 		}
+
+		const previous = tails.get(key);
+		const { promise, resolve } = Promise.withResolvers<void>();
+		tails.set(key, promise);
+		return async (fn) => {
+			try {
+				await previous;
+				return await fn();
+			} finally {
+				resolve();
+				if (tails.get(key) === promise) {
+					tails.delete(key);
+					if (tails.size === 0) {
+						this._namespaces.delete(namespace);
+					}
+				}
+			}
+		};
+	}
+
+	/** Waits for the operations that already have a turn for the key. */
+	public async idle(key: string, namespace?: string): Promise<void> {
+		await this._namespaces.get(namespace)?.get(key);
 	}
 }
 

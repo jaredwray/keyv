@@ -288,6 +288,75 @@ describe("directory strategy races and failures", () => {
 		await store.disconnect();
 	});
 
+	test("a read sees the writes, deletes and clear calls made before it", async () => {
+		const { store } = newStore();
+		await store.setMany([
+			{ key: "deleted", value: "old" },
+			{ key: "cleared", value: "old" },
+		]);
+		const changes = [store.set("written", "new"), store.delete("deleted")];
+		expect(await store.get("written")).toBe("new");
+		expect(await store.get("deleted")).toBeUndefined();
+		changes.push(store.set("many", "new"), store.delete("written"));
+		expect(await store.getMany(["many", "written"])).toEqual(["new", undefined]);
+		changes.push(store.set("has", "new"));
+		expect(await store.has("has")).toBe(true);
+		changes.push(store.clear());
+		expect(await store.hasMany(["cleared", "has"])).toEqual([false, false]);
+		await Promise.all(changes);
+		await store.disconnect();
+	});
+
+	test("a read sees every key of a large batch made before it", async () => {
+		const { store } = newStore();
+		const keys = Array.from({ length: 40 }, (_, index) => `key-${index}`);
+		await store.setMany(keys.map((key) => ({ key, value: "old" })));
+		const last = keys.at(-1) as string;
+		const entries = keys.map((key) => ({ key, value: "new" }));
+		const first = store.setMany(entries);
+		expect(await store.get(last)).toBe("new");
+		await first;
+
+		await Promise.all([store.setMany(entries), store.set(last, "last write")]);
+		expect(await store.get(last)).toBe("last write");
+
+		const removed = store.deleteMany(keys);
+		expect(await store.has(last)).toBe(false);
+		await removed;
+		await store.disconnect();
+	});
+
+	test("deleteMany uses the original keys when the caller reuses the array", async () => {
+		const { store } = newStore();
+		const keys = Array.from({ length: 40 }, (_, index) => `key-${index}`);
+		await store.setMany(keys.map((key) => ({ key, value: key })));
+		const last = keys.at(-1) as string;
+		const expected = keys.map(() => true);
+		const rename = fsOps.rename;
+		vi.spyOn(fsOps, "rename").mockImplementationOnce((from, to) => {
+			keys.length = 0;
+			return rename(from, to);
+		});
+
+		const removed = store.deleteMany(keys);
+		keys.push("extra");
+		expect(await removed).toEqual(expected);
+		expect(await store.has(last)).toBe(false);
+		await store.disconnect();
+	});
+
+	test("through Keyv, a read in a later task sees a write that is not awaited", async () => {
+		const { store } = newStore();
+		const keyv = new Keyv({ store });
+		await keyv.set("deleted", "old");
+		const changes = [keyv.set("written", "new"), keyv.delete("deleted")];
+		await tick();
+		expect(await keyv.get("written")).toBe("new");
+		expect(await keyv.get("deleted")).toBeUndefined();
+		await Promise.all(changes);
+		await keyv.disconnect();
+	});
+
 	test("a write called before clear is cleared, and one called after it is kept", async () => {
 		const { store } = newStore();
 		await store.set("seed", "v");

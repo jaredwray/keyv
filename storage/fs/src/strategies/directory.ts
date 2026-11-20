@@ -119,17 +119,19 @@ export class DirectoryStrategy extends Strategy {
 	}
 
 	public async get(ns: Namespace, key: string, reports: Reports): Promise<unknown> {
-		const stored = await this.readEntry(ns, key, reports);
+		await this.afterEarlierChanges(ns, key);
+		const { file } = this.locate(ns, key);
+		const stored = await this.readEntry(file, ns, key, reports);
 		if (stored === undefined) {
 			return undefined;
 		}
 
 		if (isExpired(stored.header.expires, Date.now())) {
-			await this.cleanUp(this.locate(ns, key).file, reports);
+			await this.cleanUp(file, stored.header, reports);
 			return undefined;
 		}
 
-		return this.decode(stored, reports);
+		return this.decode(file, stored, reports);
 	}
 
 	public async getMany(ns: Namespace, keys: string[], reports: Reports): Promise<unknown[]> {
@@ -137,6 +139,7 @@ export class DirectoryStrategy extends Strategy {
 	}
 
 	public async has(ns: Namespace, key: string, reports: Reports): Promise<boolean> {
+		await this.afterEarlierChanges(ns, key);
 		const { file } = this.locate(ns, key);
 		const header = await this.readHeader(file, ns, key, reports);
 		if (header === undefined) {
@@ -144,7 +147,7 @@ export class DirectoryStrategy extends Strategy {
 		}
 
 		if (isExpired(header.expires, Date.now())) {
-			await this.cleanUp(file, reports);
+			await this.cleanUp(file, header, reports);
 			return false;
 		}
 
@@ -168,7 +171,12 @@ export class DirectoryStrategy extends Strategy {
 		}));
 		const release = await this._gate.shared();
 		try {
-			await mapLimit(encoded, CONCURRENCY, ({ key, entry }) => this.write(ns, key, entry));
+			// Take the place of each key before the first write starts. Then a later read of any
+			// key in the batch waits for its write, also when the write waits for a free slot.
+			const turns = encoded.map(({ key }) => this._mutex.reserve(key, ns));
+			await mapLimit(encoded, CONCURRENCY, ({ key, entry }, index) =>
+				turns[index](() => this.write(ns, key, entry)),
+			);
 		} finally {
 			release();
 		}
@@ -182,7 +190,11 @@ export class DirectoryStrategy extends Strategy {
 	public async deleteMany(ns: Namespace, keys: string[]): Promise<boolean[]> {
 		const release = await this._gate.shared();
 		try {
-			return await mapLimit(keys, CONCURRENCY, (key) => this.remove(ns, key));
+			// Take the place of each key before the first delete starts, as setMany() does.
+			const turns = keys.map((key) => this._mutex.reserve(key, ns));
+			return await mapLimit(keys, CONCURRENCY, (key, index) =>
+				turns[index](() => this.remove(ns, key)),
+			);
 		} finally {
 			release();
 		}
@@ -242,11 +254,11 @@ export class DirectoryStrategy extends Strategy {
 				}
 
 				if (isExpired(stored.header.expires, Date.now())) {
-					await this.cleanUp(file, reports);
+					await this.cleanUp(file, stored.header, reports);
 					continue;
 				}
 
-				const value = this.decode(stored, reports);
+				const value = this.decode(file, stored, reports);
 				if (value !== undefined || stored.header.kind === "u") {
 					yield [stored.header.key, value];
 				}
@@ -301,7 +313,7 @@ export class DirectoryStrategy extends Strategy {
 						) {
 							reports.push(this.corruption(file, "its header is not valid"));
 						} else if (isExpired(header.expires, Date.now())) {
-							await this.withGate(() => this.removeIfExpired(file, reports));
+							await this.withGate(() => this.removeIfExpired(file, header, reports));
 						}
 					} catch (error) {
 						errors.push(error);
@@ -333,41 +345,46 @@ export class DirectoryStrategy extends Strategy {
 		this._lock = undefined;
 	}
 
+	/** An earlier clear must release the gate before the read checks the queue for its key. */
+	private async afterEarlierChanges(ns: Namespace, key: string): Promise<void> {
+		const release = await this._gate.shared();
+		release();
+		await this._mutex.idle(key, ns);
+	}
+
 	/**
 	 * Writes a key's entry: to a temporary file first, then renamed into place.
 	 */
 	private async write(ns: Namespace, key: string, entry: Entry): Promise<void> {
 		const { shard, file } = this.locate(ns, key);
-		await this._mutex.run(file, async () => {
-			if (isExpired(entry.expires, Date.now())) {
-				// Writing an expired entry deletes the key.
-				await unlinkIfExists(file);
-				return;
+		if (isExpired(entry.expires, Date.now())) {
+			// Writing an expired entry deletes the key.
+			await unlinkIfExists(file);
+			return;
+		}
+
+		const temporary = await this.writeTemporary(encodeEntryFile(ns, key, entry));
+		try {
+			if (!this._shards.has(shard)) {
+				await fsOps.mkdir(shard, PRIVATE);
+				this._shards.add(shard);
 			}
 
-			const temporary = await this.writeTemporary(encodeEntryFile(ns, key, entry));
 			try {
-				if (!this._shards.has(shard)) {
-					await fsOps.mkdir(shard, PRIVATE);
-					this._shards.add(shard);
-				}
-
-				try {
-					await renameWithRetry(temporary, file);
-				} catch (error) {
-					// A clear() moved the namespace directory away since the shard was made.
-					if (!hasCode(error, "ENOENT")) {
-						throw error;
-					}
-
-					await fsOps.mkdir(shard, PRIVATE);
-					await renameWithRetry(temporary, file);
-				}
+				await renameWithRetry(temporary, file);
 			} catch (error) {
-				await fsOps.unlink(temporary).catch(() => {});
-				throw error;
+				// A clear() moved the namespace directory away since the shard was made.
+				if (!hasCode(error, "ENOENT")) {
+					throw error;
+				}
+
+				await fsOps.mkdir(shard, PRIVATE);
+				await renameWithRetry(temporary, file);
 			}
-		});
+		} catch (error) {
+			await fsOps.unlink(temporary).catch(() => {});
+			throw error;
+		}
 	}
 
 	private async writeTemporary(content: string): Promise<string> {
@@ -398,27 +415,25 @@ export class DirectoryStrategy extends Strategy {
 	 */
 	private async remove(ns: Namespace, key: string): Promise<boolean> {
 		const { file } = this.locate(ns, key);
-		return this._mutex.run(file, async () => {
-			const parked = path.join(
-				this.temporaryDirectory,
-				`${process.pid}-${Date.now()}-${randomHex(8)}.deleting`,
-			);
-			if (!(await this.park(file, parked))) {
-				return false;
-			}
+		const parked = path.join(
+			this.temporaryDirectory,
+			`${process.pid}-${Date.now()}-${randomHex(8)}.deleting`,
+		);
+		if (!(await this.park(file, parked))) {
+			return false;
+		}
 
-			try {
-				const header = await readHeaderLine(parked);
-				return (
-					header !== undefined &&
-					header.key === key &&
-					header.namespace === ns &&
-					!isExpired(header.expires, Date.now())
-				);
-			} finally {
-				await unlinkIfExists(parked);
-			}
-		});
+		try {
+			const header = await readHeaderLine(parked);
+			return (
+				header !== undefined &&
+				header.key === key &&
+				header.namespace === ns &&
+				!isExpired(header.expires, Date.now())
+			);
+		} finally {
+			await unlinkIfExists(parked);
+		}
 	}
 
 	/**
@@ -426,12 +441,12 @@ export class DirectoryStrategy extends Strategy {
 	 * already has its answer, and the next sweep tries again. Closing waits for cleanups that
 	 * have started.
 	 */
-	private cleanUp(file: string, reports: Reports): Promise<void> {
+	private cleanUp(file: string, header: EntryHeader, reports: Reports): Promise<void> {
 		if (this._closing) {
 			return Promise.resolve();
 		}
 
-		const cleaning = this.withGate(() => this.removeIfExpired(file, reports)).catch(
+		const cleaning = this.withGate(() => this.removeIfExpired(file, header, reports)).catch(
 			(error: unknown) => {
 				reports.push(error as Error);
 			},
@@ -467,41 +482,45 @@ export class DirectoryStrategy extends Strategy {
 	 * checking is safe too: whichever of them puts it back or removes it first wins, and the
 	 * other finds it gone. A damaged entry is kept, and goes to `reports`.
 	 */
-	private async removeIfExpired(file: string, reports: Reports): Promise<void> {
-		await this._mutex.run(file, async () => {
-			// Without hard links, only the lock holder can put a newer write back (see restore()),
-			// so only it moves entries aside. Reads in other processes still hide expired entries.
-			if (this._noHardLinks && !(await this.holdsLock())) {
-				return;
-			}
-
-			const line = await readFirstLine(file);
-			const header = parseEntryHeader(line ?? "");
-			if (line !== undefined && header === undefined) {
-				reports.push(this.corruption(file, "its header is not valid"));
-			}
-
-			if (header === undefined || !isExpired(header.expires, Date.now())) {
-				return;
-			}
-
-			const parked = path.join(this.temporaryDirectory, `${process.pid}-${randomHex(8)}.expired`);
-			if (!(await this.park(file, parked))) {
-				return;
-			}
-
-			let expired = false;
-			try {
-				const header = await readHeaderLine(parked);
-				expired = header !== undefined && isExpired(header.expires, Date.now());
-			} finally {
-				if (expired) {
-					await unlinkIfExists(parked);
-				} else {
-					await this.restore(parked, file);
+	private async removeIfExpired(file: string, entry: EntryHeader, reports: Reports): Promise<void> {
+		await this._mutex.run(
+			entry.key,
+			async () => {
+				// Without hard links, only the lock holder can put a newer write back (see restore()),
+				// so only it moves entries aside. Reads in other processes still hide expired entries.
+				if (this._noHardLinks && !(await this.holdsLock())) {
+					return;
 				}
-			}
-		});
+
+				const line = await readFirstLine(file);
+				const header = parseEntryHeader(line ?? "");
+				if (line !== undefined && header === undefined) {
+					reports.push(this.corruption(file, "its header is not valid"));
+				}
+
+				if (header === undefined || !isExpired(header.expires, Date.now())) {
+					return;
+				}
+
+				const parked = path.join(this.temporaryDirectory, `${process.pid}-${randomHex(8)}.expired`);
+				if (!(await this.park(file, parked))) {
+					return;
+				}
+
+				let expired = false;
+				try {
+					const header = await readHeaderLine(parked);
+					expired = header !== undefined && isExpired(header.expires, Date.now());
+				} finally {
+					if (expired) {
+						await unlinkIfExists(parked);
+					} else {
+						await this.restore(parked, file);
+					}
+				}
+			},
+			entry.namespace,
+		);
 	}
 
 	/**
@@ -593,11 +612,11 @@ export class DirectoryStrategy extends Strategy {
 	}
 
 	private async readEntry(
+		file: string,
 		ns: Namespace,
 		key: string,
 		reports: Reports,
 	): Promise<StoredEntry | undefined> {
-		const { file } = this.locate(ns, key);
 		const stored = await this.readFile(file, reports);
 		if (stored === undefined) {
 			return undefined;
@@ -659,16 +678,11 @@ export class DirectoryStrategy extends Strategy {
 		return header;
 	}
 
-	private decode(stored: StoredEntry, reports: Reports): unknown {
+	private decode(file: string, stored: StoredEntry, reports: Reports): unknown {
 		try {
 			return decodeValue(stored.header.kind, stored.payload);
 		} catch {
-			reports.push(
-				this.corruption(
-					this.locate(stored.header.namespace, stored.header.key).file,
-					"its value is not valid",
-				),
-			);
+			reports.push(this.corruption(file, "its value is not valid"));
 			return undefined;
 		}
 	}
@@ -901,7 +915,9 @@ export class DirectoryStrategy extends Strategy {
 		}
 
 		const { file } = this.locate(header.namespace, header.key);
-		await this.withGate(() => this._mutex.run(file, () => this.restore(parked, file)));
+		await this.withGate(() =>
+			this._mutex.run(header.key, () => this.restore(parked, file), header.namespace),
+		);
 	}
 
 	private inBackground(work: Promise<unknown>): void {
