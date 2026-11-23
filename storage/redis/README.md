@@ -44,6 +44,7 @@ Redis storage adapter for [Keyv](https://github.com/jaredwray/keyv).
 * [Amazon ElastiCache](#amazon-elasticache)
 * [Upstash](#upstash)
 * [Azure Managed Redis and Azure Cache for Redis](#azure-managed-redis-and-azure-cache-for-redis)
+* [Google Cloud Memorystore](#google-cloud-memorystore)
 * [Keyv Redis Options](#keyv-redis-options)
 * [API](#api)
 * [Events](#events)
@@ -1065,6 +1066,205 @@ From the Enterprise or Enterprise Flash tier, the port stays `10000` and the hos
 - **`CROSSSLOT` errors.** A multi-key call spans hash slots. With cluster options, `KeyvRedis` splits its own multi-key calls by slot. Under the Enterprise policy, see [Enterprise cluster policy and multi-key operations](#enterprise-cluster-policy-and-multi-key-operations).
 - **Authentication errors (`WRONGPASS`, `NOAUTH`).** Access key authentication is off by default on new Azure Managed Redis caches. Turn it on, or use [Microsoft Entra ID](#microsoft-entra-id).
 - **`SELECT` errors.** Azure Managed Redis has one database and blocks `SELECT` with an error such as `ERR unknown command`. A clustered Premium cache only has database `0` and doesn't allow `SELECT`. Leave the database number out of the URI.
+
+# Google Cloud Memorystore
+
+`@keyv/redis` connects to Memorystore for Redis, Memorystore for Redis Cluster, and Memorystore for Valkey. All three use the Redis protocol. Memorystore for Redis Cluster, Memorystore for Valkey, and Memorystore for Redis 6.x and later support the commands that the adapter sends. Older Redis versions have [limits](#endpoint-port-and-client). See the supported command lists for [Memorystore for Redis](https://docs.cloud.google.com/memorystore/docs/redis/supported-commands), [Memorystore for Redis Cluster](https://docs.cloud.google.com/memorystore/docs/cluster/supported-commands), and [Memorystore for Valkey](https://docs.cloud.google.com/memorystore/docs/valkey/supported-commands). `KeyvRedis` passes an options object to `createCluster` from `@redis/client` when it has `rootNodes`, and to `createClient` otherwise. It changes the object only to apply `connectionTimeout` when you set it. So `password`, `socket`, `defaults`, `RESP`, and `credentialsProvider` below are standard `@redis/client` options. `createKeyv` accepts the same arguments.
+
+This repository also has [`@keyv/valkey`](https://github.com/jaredwray/keyv/tree/main/storage/valkey) and [`@keyv/valkey-glide`](https://github.com/jaredwray/keyv/tree/main/storage/valkey-glide), which use Valkey clients. This guide uses `@keyv/redis` for all three Memorystore services.
+
+## Endpoint, port, and client
+
+| Service | Endpoint | Port | Connect with |
+| --- | --- | --- | --- |
+| Memorystore for Redis | Primary endpoint | `6379`, or `6378` with in-transit encryption | A URI or client options |
+| Memorystore for Redis Cluster | Discovery endpoint | `6379`, plus node ports `11000`–`13047` | Cluster options (`rootNodes`) |
+| Memorystore for Valkey, Cluster Mode Enabled | Discovery endpoint | `6379`, plus node ports `11000`–`13047` | Cluster options (`rootNodes`) |
+| Memorystore for Valkey, Cluster Mode Disabled | Primary endpoint | `6379` | A URI or client options |
+
+Each endpoint is a private IP address and a port. There is no host name.
+
+- **Memorystore for Redis.** The instance details page in the console shows the primary endpoint. `gcloud redis instances describe INSTANCE_ID --region=REGION` shows it as `host` and `port`. Use the primary endpoint. Keyv writes, and the read endpoint of an instance with read replicas is for reads. See [Connect to a Redis instance](https://docs.cloud.google.com/memorystore/docs/redis/connect-redis-instance) and [Enable in-transit encryption](https://docs.cloud.google.com/memorystore/docs/redis/enabling-in-transit-encryption).
+- **Memorystore for Redis Cluster.** The **Connect to this instance** section of the cluster page shows the discovery endpoint. `gcloud redis clusters describe` shows it under `discoveryEndpoints`. Each cluster also has a data endpoint. Memorystore uses it to connect your client to the nodes, so don't connect to it directly. See [View your cluster's discovery endpoint](https://docs.cloud.google.com/memorystore/docs/cluster/connect-cluster-instance#view_your_clusters_discovery_endpoint).
+- **Memorystore for Valkey.** `gcloud memorystore instances describe` lists the endpoints. Use the entry with `connectionType: CONNECTION_TYPE_DISCOVERY` for Cluster Mode Enabled, or `CONNECTION_TYPE_PRIMARY` for Cluster Mode Disabled. The reader endpoint of a Cluster Mode Disabled instance load-balances read queries across replicas, so don't use it for Keyv. An instance is Cluster Mode Enabled unless you set its mode when you create it. See [Connect to an instance](https://docs.cloud.google.com/memorystore/docs/valkey/connect-instance) and the [product overview](https://docs.cloud.google.com/memorystore/docs/valkey/product-overview).
+
+Memorystore for Redis [supports Redis 3.2, 4.0, 5.0, 6.x, 7.0, and 7.2](https://docs.cloud.google.com/memorystore/docs/redis/supported-versions), and 7.2 is the default. Use 6.x or later. On earlier versions, these problems occur:
+
+- `@redis/client` 6 uses RESP3, so it sends [`HELLO`](https://redis.io/docs/latest/commands/hello/) when it connects. Redis added `HELLO` in 6.0, so on 5.0 and earlier the connection fails with `ERR unknown command`. To connect, add `RESP: 2` to the client options, which is the first argument.
+- `clear()` and `iterator()` send `SCAN` with the `TYPE` option, which [Redis added in 6.0](https://redis.io/docs/latest/commands/scan/). On 5.0 and earlier, these two methods fail with `ERR syntax error`.
+- `delete()` sends `UNLINK`, which [Redis added in 4.0](https://redis.io/docs/latest/commands/unlink/). On 3.2, add `useUnlink: false` to the adapter options, which are the second argument: `new KeyvRedis({ RESP: 2, socket: { ... } }, { useUnlink: false })`.
+
+You can upgrade an instance to a newer version.
+
+## Network access
+
+Memorystore has no public endpoint. Your application must run in a network that can reach the private IP address:
+
+- **Memorystore for Redis** [always uses internal IP addresses](https://docs.cloud.google.com/memorystore/docs/redis/networking). It connects to your VPC network through direct peering or private services access. Clients must use the instance's authorized network. Access from an on-premises network through Cloud VPN or Cloud Interconnect needs private services access. You can't change the connection mode of an instance.
+- **Memorystore for Redis Cluster** and **Memorystore for Valkey** use Private Service Connect endpoints, which a service connection policy creates in your network. Clients in other regions can connect, and Google documents setups for Shared VPC, multiple VPC networks, and on-premises networks. Your firewall must allow TCP port `6379` and ports `11000`–`13047`. The client gets the node ports from the discovery endpoint and then connects to each node. See [Memorystore for Redis Cluster networking](https://docs.cloud.google.com/memorystore/docs/cluster/networking) and [Memorystore for Valkey networking](https://docs.cloud.google.com/memorystore/docs/valkey/networking).
+
+How to connect from each Google Cloud environment:
+
+- **Compute Engine.** Create the VM in the authorized network of the instance, or in the network of the Private Service Connect endpoints.
+- **Google Kubernetes Engine.** Use a cluster in the same network. For a Memorystore for Redis instance that uses private services access, the GKE cluster must be VPC-native (IP aliases). See [Connect from a GKE cluster](https://docs.cloud.google.com/memorystore/docs/redis/connect-redis-instance#connect-cluster).
+- **Cloud Run and Cloud Run functions.** These need egress to the VPC network. Google recommends Direct VPC egress, which you turn on with `--network` and `--subnet` on `gcloud run deploy`. The subnet must be `/26` or larger. A Serverless VPC Access connector also works. See Memorystore for Redis's guides for [Cloud Run](https://docs.cloud.google.com/memorystore/docs/redis/connect-redis-instance-cloud-run) and [Cloud Run functions](https://docs.cloud.google.com/memorystore/docs/redis/connect-redis-instance-functions), and [Direct VPC egress](https://docs.cloud.google.com/run/docs/configuring/vpc-direct-vpc). Each service's supported environments page lists the requirements: [Memorystore for Redis](https://docs.cloud.google.com/memorystore/docs/redis/supported-environments), [Memorystore for Redis Cluster](https://docs.cloud.google.com/memorystore/docs/cluster/supported-environments), and [Memorystore for Valkey](https://docs.cloud.google.com/memorystore/docs/valkey/supported-environments).
+- **Your own computer.** For development, Google documents an [SSH tunnel through a Compute Engine VM](https://docs.cloud.google.com/memorystore/docs/redis/connect-redis-instance#connect_from_a_local_machine_by_using_port_forwarding) for Memorystore for Redis. A tunnel to a cluster doesn't work, because the client connects to the node addresses that the cluster reports.
+
+Create the Keyv instance one time, at module scope, so that requests share its connection.
+
+## AUTH and access tokens
+
+- **Memorystore for Redis.** AUTH is optional. When you turn it on, Memorystore makes a 36-character AUTH string. Get it from the **Security** section of the instance details page, or with `gcloud redis instances get-auth-string INSTANCE_ID --region=REGION`. Send it as `password`, with no `username`. To change the string, turn AUTH off and on again. Connections that are already authenticated stay open, but a reconnect must use the new string. See [About Redis AUTH](https://docs.cloud.google.com/memorystore/docs/redis/about-redis-auth) and [Manage Redis AUTH](https://docs.cloud.google.com/memorystore/docs/redis/manage-redis-auth).
+- **Memorystore for Redis Cluster and Memorystore for Valkey.** Basic token-based authentication makes a `default` user and a token for it. Turn it on when you create the instance: `--auth-mode=token-auth` on `gcloud beta redis clusters create`, or `--authorization-mode=token-auth` on `gcloud memorystore instances create`. Send the `default` user's token as `password`. For other users, send the user name as `username` and the token as `password`. Each user can have two tokens, so you can change tokens without downtime. You can't turn this mode off after you turn it on. See basic token-based authentication for [Memorystore for Redis Cluster](https://docs.cloud.google.com/memorystore/docs/cluster/manage-basic-auth) and [Memorystore for Valkey](https://docs.cloud.google.com/memorystore/docs/valkey/manage-basic-auth). These two services also support [IAM authentication](#iam-authentication).
+
+Keep the AUTH string or token in an environment variable or in Secret Manager, not in your code. Without in-transit encryption, the `AUTH` command and its value are not encrypted.
+
+## In-transit encryption and the server CA
+
+In-transit encryption is TLS 1.2 or later. When it is on, Memorystore blocks clients that don't use TLS. Google requires you to install the Memorystore CA certificates on each client, unless you use a customer-managed CA that the client already trusts:
+
+- **Memorystore for Redis.** You can turn on in-transit encryption only when you create the instance, and you can't turn it off. The port changes to `6378`. To get the CAs, use **Download** or **Download All** under **TLS server certificate** on the instance details page. `gcloud redis instances describe` also shows them. The server certificate changes every 180 days, which drops connections for a few seconds. On Redis 7.0 and later, the change doesn't drop connections. A new CA is available five years before the old one expires. See [About in-transit encryption](https://docs.cloud.google.com/memorystore/docs/redis/in-transit-encryption).
+- **Memorystore for Redis Cluster** and **Memorystore for Valkey** keep port `6379`. The default CA mode is a per-instance CA. Download it with `gcloud redis clusters get-cluster-certificate-authority CLUSTER_ID` or `gcloud memorystore instances get-certificate-authority INSTANCE_ID`. A shared CA mode uses one CA bundle for each region. With a customer-managed CA from Certificate Authority Service, clients that already trust your CA need no download. See [About in-transit encryption](https://docs.cloud.google.com/memorystore/docs/cluster/about-in-transit-encryption), [Manage in-transit encryption for Memorystore for Redis Cluster](https://docs.cloud.google.com/memorystore/docs/cluster/manage-in-transit-encryption), and [Manage in-transit encryption for Memorystore for Valkey](https://docs.cloud.google.com/memorystore/docs/valkey/manage-in-transit-encryption).
+
+Put every CA that Memorystore shows into one file, such as `server_ca.pem`. Pass the file as `socket.ca`. Node.js loads each certificate in the file. When Memorystore adds a new CA, add it to the file before the old one expires.
+
+Connect to the endpoint IP address. Node.js then checks that the certificate is for that address. Google's own [Go](https://docs.cloud.google.com/memorystore/docs/cluster/client-library-connection#in-transit_encryption_client_library_code_sample) and [Python](https://docs.cloud.google.com/memorystore/docs/valkey/client-library-code-samples#iam_auth_and_in_transit_encryption) samples also connect to the IP address with only the CA file. Leave `rejectUnauthorized` unset. The [TLS Support](#tls-support) sample sets it to `false`, which turns off the certificate check.
+
+## Memorystore for Redis and Cluster Mode Disabled Valkey
+
+Use client options:
+
+```js
+import fs from 'node:fs';
+import Keyv from 'keyv';
+import KeyvRedis, { defaultReconnectStrategy } from '@keyv/redis';
+
+const keyv = new Keyv(new KeyvRedis({
+  password: process.env.MEMORYSTORE_AUTH,
+  socket: {
+    host: process.env.MEMORYSTORE_HOST,
+    port: Number(process.env.MEMORYSTORE_PORT ?? 6378),
+    tls: true,
+    ca: fs.readFileSync('/path/to/server_ca.pem'),
+    reconnectStrategy: defaultReconnectStrategy,
+  },
+}, {
+  connectionTimeout: 5_000,
+}));
+keyv.on('error', (error) => console.error('Memorystore error', error));
+
+await keyv.set('greeting', 'hello', 60_000);
+console.log(await keyv.get('greeting')); // 'hello'
+await keyv.disconnect();
+```
+
+Set these environment variables:
+
+- `MEMORYSTORE_HOST`: the primary endpoint IP address, such as `10.0.0.3`.
+- `MEMORYSTORE_PORT`: `6379` for Valkey, and for Redis without in-transit encryption. The example uses `6378`, the port of Memorystore for Redis with in-transit encryption, when this variable is unset.
+- `MEMORYSTORE_AUTH`: the AUTH string or the `default` user's token. Leave it unset when the instance has no authentication. For a user other than `default`, add `username`.
+
+Notes:
+
+- `password` is the raw value. It is not percent-encoded, because it is not part of a URI.
+- `connectionTimeout` is an adapter option, so it goes in the second argument. Without it, an operation waits with no limit while the client tries to reconnect to an endpoint that it can't reach. With it and an `error` listener, the operation returns its fallback value, such as `undefined` from `get`, after the timeout.
+- `connectionTimeout` also turns off reconnect unless you set `socket.reconnectStrategy`. `defaultReconnectStrategy` keeps reconnect on, with exponential backoff. Google recommends backoff, because the server certificate change drops connections.
+
+Without in-transit encryption, remove `tls` and `ca`. Use port `6379`. A URI also works:
+
+```js
+const url = new URL(`redis://${process.env.MEMORYSTORE_HOST}:6379`);
+url.password = process.env.MEMORYSTORE_AUTH ?? '';
+
+const keyv = new Keyv(new KeyvRedis(url.toString()));
+```
+
+With these options, `KeyvRedis` uses one connection to one server. `getMany` sends one `MGET`, and `setMany`, `hasMany`, and `deleteMany` each send one `MULTI`/`EXEC` transaction. `clear()` and `iterator()` scan the one server.
+
+## Memorystore for Redis Cluster and Cluster Mode Enabled Valkey
+
+Use cluster options. Put the discovery endpoint in `rootNodes`. Put the TLS settings and credentials in `defaults`:
+
+```js
+import fs from 'node:fs';
+import Keyv from 'keyv';
+import KeyvRedis, { defaultReconnectStrategy } from '@keyv/redis';
+
+const keyv = new Keyv(new KeyvRedis({
+  rootNodes: [{ url: `rediss://${process.env.MEMORYSTORE_HOST}:${process.env.MEMORYSTORE_PORT ?? 6379}` }],
+  defaults: {
+    password: process.env.MEMORYSTORE_TOKEN,
+    socket: {
+      tls: true,
+      ca: fs.readFileSync('/path/to/server_ca.pem'),
+      reconnectStrategy: defaultReconnectStrategy,
+    },
+  },
+}, {
+  connectionTimeout: 5_000,
+}));
+keyv.on('error', (error) => console.error('Memorystore error', error));
+
+await keyv.setMany([
+  { key: 'user:1', value: 'Ada' },
+  { key: 'user:2', value: 'Grace' },
+]);
+console.log(await keyv.getMany(['user:1', 'user:2'])); // ['Ada', 'Grace']
+await keyv.disconnect();
+```
+
+Set `MEMORYSTORE_HOST` to the discovery endpoint IP address. Set `MEMORYSTORE_TOKEN` to the `default` user's token, or leave it unset when the instance has no authentication. Without in-transit encryption, use `redis://`. Also remove `tls` and `ca`. Keep `connectionTimeout`: if the firewall blocks the node ports, the cluster connection waits with no limit without it.
+
+- `@redis/client` uses `rootNodes` only to read the slot map. It makes the node connections from `defaults` and the addresses in the slot map. Thus, put TLS settings and credentials in `defaults`, not in `rootNodes`.
+- `socket.tls` in `defaults` must match the `rediss://` scheme in `rootNodes`. If they don't match, `@redis/client` throws an error.
+- With cluster options, `KeyvRedis` splits `getMany`, `setMany`, `hasMany`, and `deleteMany` into one command for each hash slot. `clear()` and `iterator()` scan each primary node. With `noNamespaceAffectsAll`, `clear()` sends `FLUSHDB` to each primary node.
+- A client that connects to the discovery endpoint with client options or a URI gets `MOVED` errors for keys on other shards. Always use cluster options for these services.
+
+## IAM authentication
+
+Memorystore for Redis Cluster and Memorystore for Valkey accept an IAM access token as the AUTH password. Memorystore for Redis uses AUTH strings instead. `@redis/client` supports IAM authentication through its `credentialsProvider` option, and `KeyvRedis` passes it through:
+
+- For Memorystore for Redis Cluster, give your application's principal `roles/redis.dbConnectionUser`.
+- For Memorystore for Valkey, give it `roles/memorystore.dbConnectionUser`.
+- The principal must be a user account or a service account. Google groups and domains are not supported.
+- By default, an access token expires one hour after you get it. A token that you generate can last up to 12 hours. Each new connection must send a valid token. A connection that is already authenticated stays open after its token expires.
+- You can leave out the user name, or use `default` or the email address of the IAM principal.
+- Google recommends in-transit encryption with IAM authentication, because the token is a password.
+
+Google recommends that you get a token for each new connection. A provider with the type `async-credentials-provider` does this: `@redis/client` calls it each time it connects or reconnects, for each node. This example uses [`google-auth-library`](https://github.com/googleapis/google-auth-library-nodejs), which finds credentials through [Application Default Credentials](https://docs.cloud.google.com/docs/authentication/application-default-credentials):
+
+```js
+import { GoogleAuth } from 'google-auth-library';
+
+const auth = new GoogleAuth({ scopes: 'https://www.googleapis.com/auth/cloud-platform' });
+
+const credentialsProvider = {
+  type: 'async-credentials-provider',
+  async credentials() {
+    const token = await auth.getAccessToken();
+    if (!token) {
+      throw new Error('No Google Cloud access token');
+    }
+
+    return { password: token };
+  },
+};
+
+// In the cluster example: defaults: { credentialsProvider, socket: { ... } }
+```
+
+Remove `password` from `defaults` when you add `credentialsProvider`. In TypeScript, write `type: 'async-credentials-provider' as const`. Google's auth libraries cache access tokens, so don't cache the token again in your code. On Compute Engine, the VM needs the `cloud-platform` access scope. IAM authentication limits how fast clients can open connections, so keep the reconnect backoff of `defaultReconnectStrategy`. See [About IAM authentication](https://docs.cloud.google.com/memorystore/docs/cluster/about-iam-auth), [Manage IAM authentication](https://docs.cloud.google.com/memorystore/docs/cluster/manage-iam-auth), and [IAM authentication for Memorystore for Valkey](https://docs.cloud.google.com/memorystore/docs/valkey/about-iam-auth).
+
+## Troubleshooting
+
+- **Connection timeouts.** The client can't reach the private IP address. This occurs from outside the VPC network, and from Cloud Run without Direct VPC egress or a connector. Each connection attempt stops after `socket.connectTimeout` (5 seconds by default), and then the reconnect strategy tries again. Set the adapter's `connectionTimeout` option, as in the examples, so that the operation stops. Run the application in the network, as described in [Network access](#network-access). For a cluster, also allow ports `11000`–`13047` in the firewall. See [Gracefully Handling Errors and Timeouts](#gracefully-handling-errors-and-timeouts).
+- **Socket closed or `ECONNRESET`.** The client didn't use TLS, but the instance has in-transit encryption. Use `socket.tls: true` or `rediss://`. For Memorystore for Redis, also use port `6378`.
+- **`self-signed certificate in certificate chain` or `unable to get local issuer certificate`.** Node.js doesn't trust the server CA. Pass the file with all the CAs as `socket.ca`. In a cluster, put `ca` in `defaults`. If `ca` is only in `rootNodes`, discovery succeeds, but the node connections fail. They try again with no limit until `connectionTimeout` stops them. If the error starts after a CA rotation, download the CAs again.
+- **`Hostname/IP does not match certificate's altnames`.** The client connected to a different address than the endpoint, for example `localhost` through an SSH tunnel. Connect to the endpoint IP address. Through a tunnel, check the certificate against the endpoint address: `checkServerIdentity: (_, cert) => tls.checkServerIdentity(process.env.MEMORYSTORE_HOST, cert)`, with `tls` from `node:tls`.
+- **`NOAUTH` errors.** Authentication is on, but the client sent no password or token. **`WRONGPASS`** means the password, token, or user name is wrong, or the user is disabled. For IAM, it can also mean that the token is not valid or expired, or that the principal doesn't have the role. Memorystore for Redis 3.2 to 5.0 returns `ERR invalid password` instead. See the error tables for [Redis AUTH](https://docs.cloud.google.com/memorystore/docs/redis/about-redis-auth#troubleshoot) and [IAM authentication](https://docs.cloud.google.com/memorystore/docs/cluster/manage-iam-auth#error_messages).
+- **`ERR_IAM_EXHAUSTED` or `ERR_IAM_OTHER`.** The IAM backend rejected the connection for a time. Reconnect with backoff. `ERR_IAM_OTHER` can also mean that the user name is not valid.
+- **`MOVED` or `CROSSSLOT` errors.** The instance is a cluster, but the client used a URI or client options. Use cluster options, as in [Memorystore for Redis Cluster and Cluster Mode Enabled Valkey](#memorystore-for-redis-cluster-and-cluster-mode-enabled-valkey).
+- **`ERR unknown command` for `HELLO`, or `ERR syntax error` from `clear()` or `iterator()`.** The Memorystore for Redis instance runs Redis 5.0 or earlier. Upgrade it to 6.x or later. See the version list in [Endpoint, port, and client](#endpoint-port-and-client).
 
 # API
 
