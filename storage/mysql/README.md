@@ -39,6 +39,14 @@ MySQL/MariaDB storage adapter for [Keyv](https://github.com/jaredwray/keyv).
   - [.disconnect()](#disconnect)
 - [Connection Pooling](#connection-pooling)
 - [SSL](#ssl)
+- [PlanetScale](#planetscale)
+  - [Password and connection string](#password-and-connection-string)
+  - [TLS](#tls)
+  - [Branches, safe migrations, and the table](#branches-safe-migrations-and-the-table)
+  - [Connection pooling and limits](#connection-pooling-and-limits)
+  - [Vitess and PlanetScale limits](#vitess-and-planetscale-limits)
+  - [Example](#example)
+  - [Troubleshooting](#troubleshooting)
 - [License](#license)
 
 ## Install
@@ -510,6 +518,167 @@ const keyvMysql = new KeyvMysql({
 });
 const keyv = new Keyv({ store: keyvMysql });
 ```
+
+## PlanetScale
+
+`@keyv/mysql` connects to a [PlanetScale](https://planetscale.com/docs/vitess) Vitess database with the same options that it uses for other MySQL servers. This section is for PlanetScale Vitess (MySQL) databases. For PlanetScale Postgres, use `@keyv/postgres`.
+
+The adapter uses the `mysql2` driver over the MySQL protocol. It does not use the [PlanetScale serverless driver for JavaScript](https://planetscale.com/docs/vitess/tutorials/planetscale-serverless-driver) (`@planetscale/database`), which sends queries over HTTP. PlanetScale says that some serverless and edge hosts do not permit outbound TCP connections. On those hosts, `@keyv/mysql` cannot connect.
+
+### Password and connection string
+
+Create a password for the branch that Keyv uses. Do these steps in the PlanetScale dashboard, as [Connection strings](https://planetscale.com/docs/vitess/connecting/connection-strings) describes:
+
+1. Open the database and click **Connect**.
+2. Select the branch and the password role, and type a name for the password.
+3. Click **Create password**.
+4. Copy the username, password, and host. PlanetScale does not show the password again.
+
+You can also use the CLI: `pscale password create <DATABASE_NAME> <BRANCH_NAME> <PASSWORD_NAME>`. Select these settings for the password:
+
+- **Branch.** A password is for one branch only. It cannot get access to the data or schema of a different branch.
+- **Role.** Use the **Admin** role, because the adapter changes the schema when it connects. See [Branches, safe migrations, and the table](#branches-safe-migrations-and-the-table). The Read-only, Write-only, and Read/write roles cannot change the schema. Passwords from the **Connect** button have the Admin role. You cannot change the role of a password after you create it. See [Password roles](https://planetscale.com/docs/vitess/security/password-roles).
+- **Connection type.** Use **Primary**. A **Replica** password sends queries to replicas, and the adapter must write.
+
+Put the values in a URI:
+
+```js
+const user = encodeURIComponent(process.env.PLANETSCALE_USERNAME);
+const password = encodeURIComponent(process.env.PLANETSCALE_PASSWORD);
+const uri = `mysql://${user}:${password}@${process.env.PLANETSCALE_HOST}/${process.env.PLANETSCALE_DATABASE}`;
+```
+
+The adapter decodes percent-encoded characters in the user name and password. PlanetScale's [Node.js guide](https://planetscale.com/docs/vitess/tutorials/connect-nodejs-app) adds `?ssl={"rejectUnauthorized":true}` to the URI. `@keyv/mysql` reads only the user, password, host, port, and database from `uri`, and ignores the query string. Thus, set TLS with the `ssl` option.
+
+### TLS
+
+PlanetScale requires SSL. See [Connect a MySQL GUI](https://planetscale.com/docs/vitess/tutorials/connect-mysql-gui). [Connecting to PlanetScale securely](https://planetscale.com/docs/vitess/connecting/secure-connections) tells you to verify the server certificate. PlanetScale signs its certificates with a CA that is in the root store of common systems.
+
+The adapter gives the `ssl` option to `mysql2` without changes. Use this setting:
+
+```js
+const store = new KeyvMysql({
+	uri,
+	ssl: { rejectUnauthorized: true, verifyIdentity: true },
+});
+```
+
+- `rejectUnauthorized: true` makes Node.js verify the certificate against its built-in CA store. PlanetScale's Node.js guide uses this setting. `mysql2` sets it to `true` for every `ssl` object, unless you set it to `false`.
+- `verifyIdentity: true` makes `mysql2` verify that the certificate is for the host in `uri`. This is the same check as the `VERIFY_IDENTITY` mode that PlanetScale tells you to use with the `mysql` client. `mysql2` does not do this check by default. It also does not do it when the host is an IP address, so use the host name.
+
+If your runtime must use the system CA file, give it as `ssl.ca`. PlanetScale lists the path for each operating system in [CA root configuration](https://planetscale.com/docs/vitess/connecting/secure-connections#ca-root-configuration). For example, use `/etc/ssl/certs/ca-certificates.crt` on Debian and Ubuntu:
+
+```js
+import fs from 'node:fs';
+
+const store = new KeyvMysql({
+	uri,
+	ssl: {
+		ca: fs.readFileSync('/etc/ssl/certs/ca-certificates.crt', 'utf8'),
+		verifyIdentity: true,
+	},
+});
+```
+
+PlanetScale tells you to set this path only if your driver needs it. Do not download only the CA that PlanetScale uses now, because PlanetScale can change its CA. Do not set `rejectUnauthorized: false`. Without certificate verification, the connection is open to man-in-the-middle attacks. The [SSL](#ssl) example uses that setting, and it is only for local test servers.
+
+### Branches, safe migrations, and the table
+
+The adapter creates and updates its table itself. The constructor, `reconnect()`, and `useTable()` each send `CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN expires`, and `CREATE INDEX` for the `expires` index. The adapter ignores only the "duplicate column" and "duplicate key name" errors. It sends these DDL statements when the table exists and is current, too. `resizeKeyColumns()` also sends `ALTER TABLE`. The adapter has no option to skip this work, and an operation does not start until this work is complete.
+
+PlanetScale does these things with DDL:
+
+- A new database has one production branch, `main`. Safe migrations are off on production branches by default. See [Connect any application](https://planetscale.com/docs/vitess/tutorials/connect-any-application).
+- On a branch with [safe migrations](https://planetscale.com/docs/vitess/schema-changes/safe-migrations) on, PlanetScale rejects all DDL that you send to the branch. This is true for each password role, Admin too.
+- To change the schema of that branch, create a development branch, change its schema, and merge the change with a [deploy request](https://planetscale.com/docs/vitess/schema-changes/deploy-requests). See [Branching](https://planetscale.com/docs/vitess/schema-changes/branching).
+
+Thus, the adapter starts only on a branch that accepts DDL:
+
+| Branch | Password role | Result |
+| --- | --- | --- |
+| Development branch | Admin | The adapter creates the table when it connects first. |
+| Production branch, safe migrations off | Admin | The adapter creates the table when it connects first. |
+| Any branch, safe migrations on | Any role | Each operation fails, because PlanetScale rejects the DDL. |
+| Any branch | Read-only, Write-only, or Read/write | Each operation fails, because the role cannot send DDL. |
+
+You can create the table on a development branch and merge it to production with a deploy request. But the adapter still sends DDL each time that it connects, so it cannot use a branch with safe migrations on. A table that you create before you connect does not help, for the same reason.
+
+Select one of these configurations:
+
+- **A different database for Keyv.** Turn off safe migrations on the production branch of that database. Keep safe migrations on for your application database.
+- **Safe migrations off on your production branch.** PlanetScale recommends safe migrations for all production branches, so this removes the protection from all of your tables.
+
+If you turn on safe migrations later, the adapter fails the next time that it connects.
+
+### Connection pooling and limits
+
+Each `KeyvMysql` adapter has one `mysql2` pool, and `connectionLimit` sets its size. The default is `10`. See [Connection Pooling](#connection-pooling).
+
+- PlanetScale does not meter concurrent connections. See [Plans](https://planetscale.com/docs/planetscale-plans).
+- PlanetScale limits the number of simultaneous transactions in each keyspace. This limit is the transaction pool. It is `70` on `PS-10` and goes up with the cluster size. See [Transaction pools](https://planetscale.com/docs/plans/planetscale-skus#transaction-pools-vitess).
+- Above the limit, queries fail with `transaction pool connection limit exceeded`. See [Vitess system limits](https://planetscale.com/docs/vitess/troubleshooting/planetscale-system-limits).
+
+The adapter runs one statement at a time on each pool connection. It does not start transactions. Thus, Keyv can run a maximum of processes × adapters × `connectionLimit` statements at the same time. Keep this number below the transaction pool of your cluster. Keep space in the pool for the other queries of your application.
+
+PlanetScale can close a connection that stays open for more than 24 hours. It recommends that you close and open long-lived connections again at least one time each day. `mysql2` has no maximum connection age. It closes idle connections after `idleTimeout` only when `maxIdle` is less than `connectionLimit`. A busy connection can stay open for more than a day. To replace all connections, call `reconnect()` on a timer. `reconnect()` replaces the `mysql2` options, so give it the same options again:
+
+```js
+const options = { ssl: { rejectUnauthorized: true, verifyIdentity: true }, connectionLimit: 5 };
+const store = new KeyvMysql({ uri, ...options });
+
+setInterval(() => {
+	store.reconnect(uri, options).catch((error) => console.error('reconnect failed', error));
+}, 12 * 60 * 60 * 1000).unref();
+```
+
+### Vitess and PlanetScale limits
+
+The adapter's SQL agrees with the [MySQL compatibility](https://planetscale.com/docs/vitess/troubleshooting/mysql-compatibility) rules of PlanetScale:
+
+- **Primary key.** PlanetScale requires a unique, not-null key on each table. The table has `PRIMARY KEY (namespace, id)` on two complete `VARBINARY` columns. PlanetScale rejects primary keys with [`BLOB` or `TEXT` columns](https://planetscale.com/docs/vitess/schema-changes/schema-lint-errors/blob-in-unique-key) or [prefix lengths](https://planetscale.com/docs/vitess/schema-changes/schema-lint-errors/partial-key-in-unique-key), and this key has neither.
+- **Foreign keys, triggers, and events.** The adapter creates no foreign keys, so it works when [foreign key support](https://planetscale.com/docs/vitess/foreign-key-constraints) is off. PlanetScale does not support stored routines, triggers, or events. The adapter uses none. `intervalExpiration` uses an application timer, not a MySQL `EVENT`.
+
+PlanetScale has [query limits](https://planetscale.com/docs/vitess/troubleshooting/planetscale-system-limits#query-limits) that apply to some adapter operations:
+
+- **100,000 rows in each query.** This limit applies to rows that a query returns, updates, or deletes. `clear()` deletes a namespace with one `DELETE`. `clearExpired()` and the `intervalExpiration` timer delete all expired rows with one `DELETE`. Each fails with `Row count exceeded 100000` when more than 100,000 rows match. Set `intervalExpiration` short enough that each run deletes fewer rows.
+- **64 MiB for each result set and each query.** `getMany()` and `setMany()` send one statement for each call, so keep each batch below this size. The iterator reads `iterationLimit` rows in each query.
+- **20 seconds for each transaction.** The [v6 migration script](#running-the-migration-script) runs all of its `UPDATE` statements in one transaction. On a large v5 table, the script can go above this limit or the row limit.
+
+This section is for the default unsharded keyspace. The adapter was not examined on sharded keyspaces. See [Keyspaces](https://planetscale.com/docs/vitess/sharding/keyspaces).
+
+### Example
+
+```js
+import Keyv from 'keyv';
+import KeyvMysql from '@keyv/mysql';
+
+const user = encodeURIComponent(process.env.PLANETSCALE_USERNAME);
+const password = encodeURIComponent(process.env.PLANETSCALE_PASSWORD);
+const uri = `mysql://${user}:${password}@${process.env.PLANETSCALE_HOST}/${process.env.PLANETSCALE_DATABASE}`;
+
+const store = new KeyvMysql({
+	uri,
+	ssl: { rejectUnauthorized: true, verifyIdentity: true },
+	connectionLimit: 5,
+});
+const keyv = new Keyv({ store });
+keyv.on('error', (error) => console.error('Keyv PlanetScale error', error));
+
+await keyv.set('greeting', 'hello', 60_000);
+console.log(await keyv.get('greeting')); // 'hello'
+
+await keyv.disconnect();
+```
+
+Use an Admin password for a branch that accepts DDL. See [Branches, safe migrations, and the table](#branches-safe-migrations-and-the-table). When an `error` listener is attached, a failed operation emits `error` and returns a fallback value, such as `undefined` from `get()`. Without a listener, the operation rejects.
+
+### Troubleshooting
+
+- **TLS errors.** PlanetScale requires SSL, so a connection without the `ssl` option fails. The adapter ignores `?ssl=...` in `uri`, so set the `ssl` option. The error `self-signed certificate in certificate chain` or `unable to get local issuer certificate` means that Node.js cannot find the CA. If you set `ssl.ca`, make sure that the file is the full system root store from [CA root configuration](https://planetscale.com/docs/vitess/connecting/secure-connections#ca-root-configuration). The error `Hostname/IP does not match certificate's altnames` comes from `verifyIdentity`. It means that the host in `uri` is not the name in the certificate. Use the host from the **Connect** page.
+- **Access denied on a branch.** A password works only on its branch. Make sure that the branch in **Settings** > **Passwords** is the branch that you want. PlanetScale disconnects clients that use a deleted password in five minutes or less. A password with IP restrictions refuses connections from other IP ranges. See [Connection strings](https://planetscale.com/docs/vitess/connecting/connection-strings). The error `branch is missing or sleeping` means that the branch is deleted or [sleeping](https://planetscale.com/docs/plans/database-sleeping).
+- **The table is not created.** The error `DDL command denied to user` means that the password role cannot change the schema. Use an Admin password. The error `direct DDL is disabled` or `Data Definition Language is not supported on branches with safe migrations enabled.` means that safe migrations are on for the branch. A table from a deploy request does not prevent this error. See [Branches, safe migrations, and the table](#branches-safe-migrations-and-the-table) and [PlanetScale database error reference](https://planetscale.com/docs/vitess/troubleshooting/errors).
+- **`Row count exceeded 100000`.** A `clear()` or expiration `DELETE` matched more than 100,000 rows. See [Vitess and PlanetScale limits](#vitess-and-planetscale-limits).
+- **`transaction pool connection limit exceeded`.** Decrease `connectionLimit` or the number of processes, or use a larger cluster size. See [Connection pooling and limits](#connection-pooling-and-limits).
 
 ## License
 
