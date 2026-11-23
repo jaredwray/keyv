@@ -650,7 +650,17 @@ PlanetScale has [query limits](https://planetscale.com/docs/vitess/troubleshooti
 
 - **100,000 rows in each query.** This limit applies to rows that a query returns, updates, or deletes. `clear()` deletes a namespace with one `DELETE`. `clearExpired()` and the `intervalExpiration` timer delete all expired rows with one `DELETE`. Each fails with `Row count exceeded 100000` when more than 100,000 rows match. See [PlanetScale database error reference](https://planetscale.com/docs/vitess/troubleshooting/errors). Set `intervalExpiration` short enough that each run deletes fewer rows.
 - **64 MiB for each result set and each query.** `setMany()` sends one `INSERT`. `getMany()` sends one `SELECT`, and then one `DELETE` if it finds expired keys. Keep each batch below this size. The iterator reads `iterationLimit` rows in each query.
-- **20 seconds for each transaction.** The [v6 migration script](#running-the-migration-script) runs the namespace `UPDATE` in one transaction. After that transaction, a different `UPDATE` fills `expires`. The script does not run this second `UPDATE` when it finds no namespace rows to migrate. On a large v5 table, the first `UPDATE` can go above the 20-second limit. Each `UPDATE` can go above the row limit.
+- **20 seconds for each transaction.** The [v6 migration script](#running-the-migration-script) runs the namespace `UPDATE` in one transaction. After that transaction, a different `UPDATE` fills `expires`. The script does not run this second `UPDATE` when it finds no namespace rows to migrate. In that case, run the second `UPDATE` yourself, as shown after this list. On a large v5 table, the first `UPDATE` can go above the 20-second limit. Each `UPDATE` can go above the row limit.
+
+This is the `UPDATE` that the script uses to fill `expires`. Replace `keyv` with your table name:
+
+```sql
+UPDATE keyv
+SET expires = CAST(value->'$.expires' AS UNSIGNED)
+WHERE expires IS NULL AND JSON_VALID(value) AND value->'$.expires' IS NOT NULL;
+```
+
+If more than 100,000 rows match, add `LIMIT 100000`. Run the statement again until it changes no rows.
 
 This section is for the default unsharded keyspace. No test ran the adapter on a sharded keyspace. See [Keyspaces](https://planetscale.com/docs/vitess/sharding/keyspaces).
 
