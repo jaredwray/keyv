@@ -77,6 +77,12 @@ Every package below is released at the same version as `keyv` from v6 on. All of
 - `sixHoursInMilliseconds` was removed. Keys written by v5 keep the expiry they were written with.
 - `ttlSupport` and `opts` were removed.
 
+## `@keyv/fs`
+
+With `@keyv/fs`, call order starts when operations reach the shared adapter in one process.
+For each key, `get()`, `has()`, `getMany()`, and `hasMany()` see earlier writes, deletes, and namespace clears.
+Await the Keyv write before a read or an iterator that depends on it.
+
 ## `@keyv/bigmap`
 
 - Emits Hookified events (`BigMapEvents`). The `MapInterfacee` type is now `MapInterface`.

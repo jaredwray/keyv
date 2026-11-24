@@ -211,7 +211,8 @@ export class KeyvFs extends Hookified implements KeyvStorageAdapter {
 	 * @returns For each key, whether it existed and had not expired.
 	 */
 	public async deleteMany(keys: string[]): Promise<boolean[]> {
-		return this.call((backend, ns, reports) => backend.deleteMany(ns, keys, reports), true);
+		const batch = keys.slice();
+		return this.call((backend, ns, reports) => backend.deleteMany(ns, batch, reports), true);
 	}
 
 	/**

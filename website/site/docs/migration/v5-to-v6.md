@@ -687,6 +687,10 @@ These changes don't cause compile errors, and most of them don't throw. Check yo
 - **Stats count per key.** `getMany(['a', 'b'])` now records a hit or miss for each key, not one for the call. A failed read counts as an error, not a miss. The v5 `StatsManager` methods `hit()`, `miss()`, `set()`, `delete()`, and `hitsOrMisses()` were removed.
 - **Some exports were removed.** `CompressionAdapter`, `Serialize`, `Deserialize`, `StoredData`, `StoredDataNoRaw`, and `StoredDataRaw` are gone, and `IEventEmitter` now comes from `hookified`. `KeyvStoreAdapter`, `DeserializedData`, and `KeyvCompression` remain as deprecated aliases of `KeyvStorageAdapter`, `KeyvValue`, and `KeyvCompressionAdapter`.
 
+With `@keyv/fs`, call order starts when operations reach the shared adapter in one process.
+For each key, `get()`, `has()`, `getMany()`, and `hasMany()` see earlier writes, deletes, and namespace clears.
+Await the Keyv write before a read or an iterator that depends on it.
+
 ---
 
 ### `@keyv/test-suite` API Changes
