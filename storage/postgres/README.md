@@ -48,6 +48,7 @@ Requires Postgres 9.5 or newer for `ON CONFLICT` support to allow performant ups
 - [SSL/TLS Connections](#ssltls-connections)
 - [Amazon RDS for PostgreSQL](#amazon-rds-for-postgresql)
 - [Supabase](#supabase)
+- [Prisma Postgres](#prisma-postgres)
 - [Testing](#testing)
 - [License](#license)
 
@@ -771,6 +772,115 @@ Leave `useUnloggedTable` off on Supabase unless losing every entry at once is ac
 - Standbys and read replicas, which are built from the write-ahead log, have the table but not its rows. Neither does a point-in-time restore.
 
 The option only applies when the adapter creates the table. Setting it on an existing table changes nothing, and turning it off later leaves the table unlogged. See [Using an Unlogged Table for Performance](#using-an-unlogged-table-for-performance).
+
+# Prisma Postgres
+
+`@keyv/postgres` connects to a [Prisma Postgres](https://www.prisma.io/postgres) database with the same `uri` and `ssl` options that it uses for any PostgreSQL server. The adapter passes `uri` to `pg` as its `connectionString` and passes `ssl` to `pg` unchanged. It passes options that it does not know, such as `max`, to `pg.Pool`. `createKeyv` accepts the same options. The Prisma guide [Connecting to your database](https://www.prisma.io/docs/postgres/database/connecting-to-your-database) is the reference for the provider details below.
+
+## Connection strings
+
+Each Prisma Postgres database has a direct connection string and a pooled connection string. The user, password, port, and database name are the same in the two strings. Only the host is different:
+
+| Method | Host and port | What it connects to |
+| --- | --- | --- |
+| Direct connection | `db.prisma.io:5432` | The Postgres server |
+| Pooled connection | `pooled.db.prisma.io:5432` | PgBouncer in transaction mode |
+
+The Prisma guide shows how to get the two strings from the Prisma Console. If you do not have an account, this command creates a temporary database and prints its direct connection string:
+
+```shell
+npx create-db@latest
+```
+
+To get the pooled connection string from a direct connection string, change the host to `pooled.db.prisma.io`.
+
+Keep the connection string in an environment variable:
+
+```js
+import Keyv from 'keyv';
+import KeyvPostgres from '@keyv/postgres';
+
+const keyv = new Keyv({ store: new KeyvPostgres({ uri: process.env.DATABASE_URL, schema: 'keyv' }) });
+keyv.on('error', (error) => console.error('Prisma Postgres error', error));
+```
+
+## Direct host or pooled host
+
+The adapter works with the two hosts. Select the host from where your application runs:
+
+- **One server process that stays in operation:** use the direct host or the pooled host. The `pg.Pool` of the adapter keeps a small number of connections open and uses them again.
+- **Serverless functions or many short-lived instances:** use the pooled host, and set a small `max`. Each instance has its own `pg.Pool`, and the direct host accepts only a small number of connections.
+
+When too many clients connect to the direct host, Postgres refuses the new connections. The operations fail with errors such as `too many connections for role "prisma_migration"` and `remaining connection slots are reserved for roles with the SUPERUSER attribute`. Prisma gives the limits for each plan in [Connection pooling](https://www.prisma.io/docs/postgres/database/connection-pooling#connection-limits).
+
+The pooled host gives a Postgres connection to a client for one transaction only. The same Prisma page says that `SET` commands, prepared statements, advisory locks, and temporary tables do not stay after a transaction. It also says that `LISTEN`/`NOTIFY` needs the direct host, and that the pooled host stops a query after 10 minutes.
+
+`@keyv/postgres` works with the pooled host as it is:
+
+- **No prepared statements.** The adapter sends each statement with `pool.query(text, values)` and does not set a query `name`.
+- **No session state.** The adapter does not use `SET`, `LISTEN`, advisory locks, temporary tables, cursors, or `BEGIN`/`COMMIT`. Each statement is its own transaction. `setMany` is one `INSERT ... SELECT FROM UNNEST(...)` statement, so it stays atomic.
+- **Setup statements.** The adapter creates its schema, table, and indexes through the pooled host. A direct connection for setup is not necessary.
+
+On a serverless platform, pass `max` with the other options:
+
+```js
+const keyv = new Keyv({
+  store: new KeyvPostgres({
+    uri: process.env.DATABASE_URL,
+    schema: 'keyv',
+    max: 1,
+  }),
+});
+```
+
+Here `DATABASE_URL` contains the pooled connection string. Create the client one time at module scope, not for each request.
+
+## TLS settings
+
+Prisma Postgres accepts only TLS connections. The connection strings from Prisma end with `?sslmode=require`. If you remove that parameter and do not set `ssl`, the connection fails with `read ECONNRESET`. `?sslmode=disable` fails with the same error.
+
+A public certificate authority signs the server certificate, and Node.js trusts that authority by default. You do not need a CA file or the `ssl.ca` option. These settings connect and make sure that the certificate is correct for the host in `uri`:
+
+- **`?sslmode=verify-full` on the URI.** `pg` makes sure that the CA and the hostname are correct. Use this setting.
+- **`?sslmode=require` on the URI.** `pg` 8 uses `require` as `verify-full`, so the result is the same. `pg` also logs a security warning.
+- **`ssl: true` with a URI that has no `sslmode`.** The result is the same as `verify-full`.
+
+To remove the warning, change `sslmode` to `verify-full`:
+
+```js
+const url = new URL(process.env.DATABASE_URL);
+url.searchParams.set('sslmode', 'verify-full');
+
+const keyvPostgres = new KeyvPostgres({ uri: url.toString(), schema: 'keyv' });
+```
+
+Do not use `ssl: { rejectUnauthorized: false }`. It connects, but it accepts any certificate. When the URI has SSL parameters, `pg` makes its SSL settings from the URI and ignores the `ssl` option. Thus, configure TLS in one place. See [Configuring TLS in the URI](#configuring-tls-in-the-uri).
+
+## Schema and table
+
+When the adapter connects, it creates its schema and table with `CREATE SCHEMA IF NOT EXISTS` and `CREATE TABLE IF NOT EXISTS`. It then adds columns that are not there and creates its indexes. The user in the Prisma Postgres connection string has permission to do this.
+
+Set `schema` to a name other than `public`, such as `keyv`. A separate schema keeps the Keyv table apart from the tables of your application. `table` defaults to `keyv`.
+
+## Expired entries
+
+The adapter deletes an expired row when `get`, `getMany`, `has`, or `hasMany` reads it. To delete expired rows that no client reads again, call `clearExpired()` or set `clearExpiredInterval`:
+
+```js
+const keyv = new Keyv({
+  store: new KeyvPostgres({
+    uri: process.env.DATABASE_URL,
+    schema: 'keyv',
+    clearExpiredInterval: 60 * 60 * 1000, // one hour
+  }),
+});
+```
+
+Each run is one `DELETE` statement, so it works on the direct host and on the pooled host. Each process that has this option runs its own timer. See [Expired entries and `clearExpiredInterval`](#expired-entries-and-clearexpiredinterval) for more data.
+
+## Unlogged tables
+
+Prisma Postgres creates an unlogged table when you set `useUnloggedTable: true`. Do not set this option unless you can lose all entries at the same time. Postgres empties an unlogged table after a crash or an unclean shutdown, and on a managed host you do not control when the server starts again. See [`useUnloggedTable` on a managed host](#useunloggedtable-on-a-managed-host).
 
 # Testing
 
