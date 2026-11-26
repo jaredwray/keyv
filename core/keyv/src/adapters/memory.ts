@@ -463,7 +463,8 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 		const namespace = this._namespace;
 		// Delete the expired keys after the loop, also when the caller stops the loop early. The
 		// iterators of some stores, such as lru.min, skip entries when an entry is deleted in the loop.
-		const expiredKeys: string[] = [];
+		// Each key keeps the entry it had, so a value written while the loop runs is not deleted.
+		const expiredEntries = new Map<string, MemoryEntry>();
 
 		try {
 			for (const [key, raw] of (this._store as Map<KeyvAny, KeyvAny>).entries()) {
@@ -478,7 +479,7 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 
 				// Check expiration
 				if (isExpired(entry)) {
-					expiredKeys.push(key);
+					expiredEntries.set(key, entry);
 					continue;
 				}
 
@@ -490,8 +491,10 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 				yield [keyWithoutPrefix, entry?.value];
 			}
 		} finally {
-			for (const key of expiredKeys) {
-				this._store.delete(key);
+			for (const [key, entry] of expiredEntries) {
+				if (this._store.get(key) === entry) {
+					this._store.delete(key);
+				}
 			}
 		}
 	}

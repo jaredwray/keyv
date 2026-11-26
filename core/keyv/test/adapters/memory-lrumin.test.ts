@@ -234,4 +234,18 @@ describe("KeyvMemoryAdapter with lru.min - iterator", () => {
 
 		expect([...lru.keys()]).toEqual(["live-2", "live-1"]);
 	});
+
+	test("should keep a value written to an expired key while the loop runs", async () => {
+		const lru = createLRU<string, unknown>({ max: 10 });
+		const keyv = new KeyvMemoryAdapter(lru);
+		await keyv.set("live", 1);
+		await keyv.set("refreshed", 2, Date.now() - 1000);
+
+		for await (const [key] of keyv.iterator()) {
+			expect(key).toBe("live");
+			await keyv.set("refreshed", 3);
+		}
+
+		expect(await keyv.get("refreshed")).toBe(3);
+	});
 });
