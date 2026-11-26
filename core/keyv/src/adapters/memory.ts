@@ -461,29 +461,38 @@ export class KeyvMemoryAdapter extends Hookified implements KeyvStorageAdapter {
 		}
 
 		const namespace = this._namespace;
+		// Delete the expired keys after the loop, also when the caller stops the loop early. The
+		// iterators of some stores, such as lru.min, skip entries when an entry is deleted in the loop.
+		const expiredKeys: string[] = [];
 
-		for (const [key, raw] of (this._store as Map<KeyvAny, KeyvAny>).entries()) {
-			// Filter by namespace if set
-			if (namespace) {
-				if (!key.startsWith(`${namespace}${this._namespaceSeparator}`)) {
+		try {
+			for (const [key, raw] of (this._store as Map<KeyvAny, KeyvAny>).entries()) {
+				// Filter by namespace if set
+				if (namespace) {
+					if (!key.startsWith(`${namespace}${this._namespaceSeparator}`)) {
+						continue;
+					}
+				}
+
+				const entry = raw as MemoryEntry;
+
+				// Check expiration
+				if (isExpired(entry)) {
+					expiredKeys.push(key);
 					continue;
 				}
+
+				// Extract the key without namespace prefix
+				const keyWithoutPrefix = namespace
+					? key.slice(namespace.length + this._namespaceSeparator.length)
+					: key;
+
+				yield [keyWithoutPrefix, entry?.value];
 			}
-
-			const entry = raw as MemoryEntry;
-
-			// Check expiration
-			if (isExpired(entry)) {
+		} finally {
+			for (const key of expiredKeys) {
 				this._store.delete(key);
-				continue;
 			}
-
-			// Extract the key without namespace prefix
-			const keyWithoutPrefix = namespace
-				? key.slice(namespace.length + this._namespaceSeparator.length)
-				: key;
-
-			yield [keyWithoutPrefix, entry?.value];
 		}
 	}
 

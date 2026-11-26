@@ -197,3 +197,41 @@ describe("KeyvMemoryAdapter with lru.min - clearExpired", () => {
 		expect([...lru.keys()]).toEqual(["live"]);
 	});
 });
+
+describe("KeyvMemoryAdapter with lru.min - iterator", () => {
+	test("should yield every live entry and delete the expired entries", async () => {
+		const lru = createLRU<string, unknown>({ max: 10 });
+		const keyv = new KeyvMemoryAdapter(lru);
+		const past = Date.now() - 1000;
+		await keyv.set("live-1", 1);
+		await keyv.set("expired-1", 2, past);
+		await keyv.set("live-2", 3);
+		await keyv.set("expired-2", 4, past);
+
+		const entries: unknown[] = [];
+		for await (const entry of keyv.iterator()) {
+			entries.push(entry);
+		}
+
+		expect(entries).toEqual([
+			["live-2", 3],
+			["live-1", 1],
+		]);
+		expect([...lru.keys()]).toEqual(["live-2", "live-1"]);
+	});
+
+	test("should delete the expired entries it passed when the loop stops early", async () => {
+		const lru = createLRU<string, unknown>({ max: 10 });
+		const keyv = new KeyvMemoryAdapter(lru);
+		await keyv.set("live-1", 1);
+		await keyv.set("live-2", 2);
+		await keyv.set("expired", 3, Date.now() - 1000);
+
+		for await (const [key] of keyv.iterator()) {
+			expect(key).toBe("live-2");
+			break;
+		}
+
+		expect([...lru.keys()]).toEqual(["live-2", "live-1"]);
+	});
+});
